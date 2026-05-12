@@ -1,0 +1,4 @@
+# Revision rapida
+
+- usuarios.js: OK
+- app.js: OK
