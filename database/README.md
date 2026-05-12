@@ -1,5 +1,5 @@
-# Database
+# Conexion a base de datos
 
-Aqui van los archivos SQL.
+Aqui va la conexion entre Node.js y MySQL.
 
-El archivo tienda_tech.sql crea la base de datos y las tablas principales.
+El archivo conexion.js sera usado por los controladores para hacer consultas.
