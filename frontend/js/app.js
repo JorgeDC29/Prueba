@@ -123,7 +123,7 @@ import {
     function jsString(value) {
       return JSON.stringify(String(value));
     };
-    }
+    
 
     /* ========================================================= */
     /* DATOS FIREBASE */
