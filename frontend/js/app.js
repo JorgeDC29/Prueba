@@ -123,6 +123,7 @@ import {
     function jsString(value) {
       return JSON.stringify(String(value));
     };
+    }
 
     /* ========================================================= */
     /* DATOS FIREBASE */
@@ -617,10 +618,10 @@ import {
 
             <div class="card-actions">
               ${selectedRole === 'usuario' ? `
-                <button class="small-button ${isFavorite ? 'active' : ''}" type="button" onclick="toggleFavorite(${jsString(productId)})">${isFavorite ? 'Guardado' : 'Guardar'}</button>
+                <button class="small-button ${isFavorite ? 'active' : ''}" type="button" onclick='toggleFavorite(${jsString(productId)})'>${isFavorite ? 'Guardado' : 'Guardar'}</button>
               ` : activeSection === 'mis-productos' ? `
-                <button class="small-button" type="button" onclick="showProductForm(${jsString(productId)})">Editar</button>
-                <button class="small-button danger" type="button" onclick="deleteProduct(${jsString(productId)})">Eliminar</button>
+                <button class="small-button" type="button" onclick='showProductForm(${jsString(productId)})'>Editar</button>
+                <button class="small-button danger" type="button" onclick='deleteProduct(${jsString(productId)})'>Eliminar</button>
               ` : ''}
             </div>
           </div>
@@ -983,7 +984,7 @@ import {
       const totalProducts = products.filter((product) => getProductCompanyId(product) === String(market.id)).length;
 
       return `
-        <article class="market-card" onclick="showMarketCatalog(${jsString(market.id)})">
+        <article class="market-card" onclick='showMarketCatalog(${jsString(market.id)})'>
           <div>
             <div class="market-logo">${market.logo || 'TT'}</div>
             <h3 class="market-name">${market.name || market.nombre_empresa}</h3>
