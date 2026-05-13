@@ -118,8 +118,12 @@ import {
       }
 
       return new Date().toISOString().slice(0, 10);
+    }
+
+    function jsString(value) {
+      return JSON.stringify(String(value));
     };
-    
+    }
 
     /* ========================================================= */
     /* DATOS FIREBASE */
@@ -614,10 +618,10 @@ import {
 
             <div class="card-actions">
               ${selectedRole === 'usuario' ? `
-                <button class="small-button ${isFavorite ? 'active' : ''}" type="button" onclick="toggleFavorite(${productId})">${isFavorite ? 'Guardado' : 'Guardar'}</button>
+                <button class="small-button ${isFavorite ? 'active' : ''}" type="button" onclick="toggleFavorite(${jsString(productId)})">${isFavorite ? 'Guardado' : 'Guardar'}</button>
               ` : activeSection === 'mis-productos' ? `
-                <button class="small-button" type="button" onclick="showProductForm(${productId})">Editar</button>
-                <button class="small-button danger" type="button" onclick="deleteProduct(${productId})">Eliminar</button>
+                <button class="small-button" type="button" onclick="showProductForm(${jsString(productId)})">Editar</button>
+                <button class="small-button danger" type="button" onclick="deleteProduct(${jsString(productId)})">Eliminar</button>
               ` : ''}
             </div>
           </div>
@@ -758,7 +762,8 @@ import {
         const favoritosQuery = query(
           collection(db, "favoritos"),
           where("id_usuario", "==", currentAccount.id_usuario),
-          where("id_producto", "==", productId)
+          where("id_producto", "==", productId),
+          where("estado", "==", "activo")
         );
 
         const favoritosSnapshot = await getDocs(favoritosQuery);
@@ -976,10 +981,10 @@ import {
     /* ========================================================= */
 
     function createMarketCard(market) {
-      const totalProducts = products.filter((product) => product.marketId === market.id).length;
+      const totalProducts = products.filter((product) => getProductCompanyId(product) === String(market.id)).length;
 
       return `
-        <article class="market-card" onclick="showMarketCatalog(${market.id})">
+        <article class="market-card" onclick="showMarketCatalog(${jsString(market.id)})">
           <div>
             <div class="market-logo">${market.logo || 'TT'}</div>
             <h3 class="market-name">${market.name || market.nombre_empresa}</h3>
@@ -997,10 +1002,23 @@ import {
     }
 
     function showMarketCatalog(marketId) {
-      const market = markets.find((item) => item.id === marketId);
-      const marketProducts = products.filter((product) => getProductCompanyId(product) === marketId);
+      const market = markets.find((item) => String(item.id) === String(marketId));
 
-      sectionTitle.textContent = market.name;
+      if (!market) {
+        sectionTitle.textContent = 'Mercado no encontrado';
+        sectionActions.innerHTML = `<button class="secondary-button" type="button" onclick="renderMarkets()">Volver</button>`;
+        dynamicContent.innerHTML = `
+          <div class="empty-state">
+            <h3>No se encontro este mercado</h3>
+            <p>Actualiza la pagina o vuelve a la seccion Mercados.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const marketProducts = products.filter((product) => getProductCompanyId(product) === String(marketId));
+
+      sectionTitle.textContent = market.name || market.nombre_empresa;
       sectionActions.innerHTML = `<button class="secondary-button" type="button" onclick="renderMarkets()">Volver</button>`;
 
       dynamicContent.innerHTML = `
