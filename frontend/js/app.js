@@ -1119,7 +1119,7 @@ import {
         return;
       }
 
-      const marketProducts = products.filter((product) => getProductCompanyId(product) === String(marketId));
+      const marketProducts = products.filter((product) => getProductCompanyId(product) === String(marketId) && product.estado !== "inhabilitado");
 
       sectionTitle.textContent = market.name || market.nombre_empresa;
       sectionActions.innerHTML = `<button class="secondary-button" type="button" onclick="renderMarkets()">Volver</button>`;
