@@ -179,12 +179,7 @@ import {
             return currentAccount?.tipo_cuenta === "empresa" && String(currentAccount.id_empresa) === String(empresa.id_empresa);
           });
 
-        const productosQuery = query(
-          collection(db, "productos"),
-          where("estado", "==", "activo")
-        );
-
-        const productosSnapshot = await getDocs(productosQuery);
+        const productosSnapshot = await getDocs(collection(db, "productos"));
 
         products = productosSnapshot.docs.map((productDoc) => {
           const product = productDoc.data();
@@ -209,6 +204,7 @@ import {
             rating: estrellas,
             estrellas: estrellas,
             stock: Number(product.stock || 0),
+            estado: product.estado || "activo",
             date: formatFirebaseDate(product.fecha_publicacion || product.date),
             economical: precio < 30,
             recommended: estrellas > 3,
@@ -540,14 +536,16 @@ import {
         ...heroCards.slice(0, visibleCards)
       ];
 
-      const economicProducts = products
+      const activeProducts = products.filter((product) => product.estado !== "inhabilitado");
+
+      const economicProducts = activeProducts
         .filter((product) => Number(product.price) < 30)
         .slice(0, 10);
 
-      const recommendedProducts = products
+      const recommendedProducts = activeProducts
         .filter((product) => Number(product.rating) > 3);
 
-      const economicRecommendedProducts = products
+      const economicRecommendedProducts = activeProducts
         .filter((product) => Number(product.price) < 30 && Number(product.rating) > 3);
 
       dynamicContent.innerHTML = `
@@ -661,6 +659,7 @@ import {
                 <span class="tag">${marketName}</span>
                 ${product.economical ? '<span class="tag">Economico</span>' : ''}
                 ${product.recommended ? '<span class="tag">Recomendado</span>' : ''}
+                ${product.estado === "inhabilitado" ? '<span class="tag">Inhabilitado</span>' : ''}
               </div>
             </div>
 
@@ -669,7 +668,11 @@ import {
                 <button class="small-button ${isFavorite ? 'active' : ''}" type="button" onclick='toggleFavorite(${jsString(productId)})'>${isFavorite ? 'Guardado' : 'Guardar'}</button>
               ` : activeSection === 'mis-productos' ? `
                 <button class="small-button" type="button" onclick='showProductForm(${jsString(productId)})'>Editar</button>
-                <button class="small-button danger" type="button" onclick='deleteProduct(${jsString(productId)})'>Eliminar</button>
+                ${product.estado === "inhabilitado" ? `
+                  <button class="small-button" type="button" onclick='enableProduct(${jsString(productId)})'>Reactivar</button>
+                ` : `
+                  <button class="small-button danger" type="button" onclick='disableProduct(${jsString(productId)})'>Inhabilitar</button>
+                `}
               ` : ''}
             </div>
           </div>
@@ -778,7 +781,7 @@ import {
       sectionTitle.textContent = 'Productos';
       sectionActions.innerHTML = '';
 
-      const filteredProducts = getFilteredProducts();
+      const filteredProducts = getFilteredProducts().filter((product) => product.estado !== "inhabilitado");
 
       dynamicContent.innerHTML = `
         ${createProductToolbar()}
@@ -860,7 +863,18 @@ import {
         return getProductCompanyId(product) === myCompanyId;
       });
 
+      const activeCount = myProducts.filter((product) => product.estado !== "inhabilitado").length;
+      const inactiveCount = myProducts.filter((product) => product.estado === "inhabilitado").length;
+
       dynamicContent.innerHTML = `
+        <div class="panel">
+          <h3>Resumen de mis productos</h3>
+          <div class="mini-stats">
+            <div class="stat-card"><span class="stat-number">${activeCount}</span><span class="stat-label">Activos</span></div>
+            <div class="stat-card"><span class="stat-number">${inactiveCount}</span><span class="stat-label">Inhabilitados</span></div>
+          </div>
+        </div>
+
         ${!isApproved ? `
           <div class="empty-state">
             <h3>Empresa pendiente de aprobacion</h3>
@@ -1013,33 +1027,56 @@ import {
       return Math.max(...products.map((product) => product.id)) + 1;
     }
 
-    async function deleteProduct(productId) {
-      const confirmDelete = confirm('Seguro que deseas eliminar este producto?');
+    async function disableProduct(productId) {
+      const confirmDisable = confirm('Inhabilitar este producto? Dejare de aparecer publicamente, pero seguira en Mis productos.');
 
-      if (!confirmDelete) return;
+      if (!confirmDisable) return;
 
       try {
         const product = products.find((item) => (item.id || item.id_producto) === productId);
 
         if (!product || getProductCompanyId(product) !== getCurrentCompanyId()) {
-          alert('No puedes eliminar productos de otra empresa.');
+          alert('No puedes inhabilitar productos de otra empresa.');
           return;
         }
 
         await updateDoc(doc(db, "productos", productId), {
-          estado: "inactivo"
+          estado: "inhabilitado"
         });
 
-        favoriteProducts = favoriteProducts.filter((id) => id !== productId);
+        await loadData();
+        renderMyProductsSection();
+      } catch (error) {
+        alert('No se pudo inhabilitar el producto en Firebase.');
+      }
+    }
+
+    async function enableProduct(productId) {
+      const confirmEnable = confirm('Reactivar este producto? Volvera a aparecer publicamente.');
+
+      if (!confirmEnable) return;
+
+      try {
+        const product = products.find((item) => (item.id || item.id_producto) === productId);
+
+        if (!product || getProductCompanyId(product) !== getCurrentCompanyId()) {
+          alert('No puedes reactivar productos de otra empresa.');
+          return;
+        }
+
+        await updateDoc(doc(db, "productos", productId), {
+          estado: "activo"
+        });
 
         await loadData();
-
-        const activeSection = document.querySelector('.dashboard-item.active')?.dataset.section;
-        if (activeSection === 'mis-productos') renderMyProductsSection();
-        else renderProductsSection();
+        renderMyProductsSection();
       } catch (error) {
-        alert('No se pudo eliminar el producto en Firebase.');
+        alert('No se pudo reactivar el producto en Firebase.');
       }
+    }
+
+    async function deleteProduct(productId) {
+      await disableProduct(productId);
     }
 
     /* ========================================================= */
@@ -1047,7 +1084,7 @@ import {
     /* ========================================================= */
 
     function createMarketCard(market) {
-      const totalProducts = products.filter((product) => getProductCompanyId(product) === String(market.id)).length;
+      const totalProducts = products.filter((product) => getProductCompanyId(product) === String(market.id) && product.estado !== "inhabilitado").length;
 
       return `
         <article class="market-card" onclick='showMarketCatalog(${jsString(market.id)})'>
@@ -1132,7 +1169,7 @@ import {
     function renderSaleModeCatalog() {
       const market = markets.find((item) => item.id === companyMarketId) || markets[0];
       const marketProducts = getFilteredProducts().filter((product) => {
-        return getProductCompanyId(product) === market.id;
+        return getProductCompanyId(product) === market.id && product.estado !== "inhabilitado";
       });
 
       sectionTitle.textContent = 'Modo venta';
@@ -1228,7 +1265,7 @@ import {
 
     function renderFavorites() {
       sectionTitle.textContent = 'Favoritos';
-      const favorites = products.filter((product) => favoriteProducts.includes(product.id));
+      const favorites = products.filter((product) => favoriteProducts.includes(product.id) && product.estado !== "inhabilitado");
 
       dynamicContent.innerHTML = favorites.length === 0 ? `
         <div class="empty-state">
@@ -1707,6 +1744,8 @@ import {
       toggleFavorite,
       showProductForm,
       deleteProduct,
+      disableProduct,
+      enableProduct,
       renderMarkets,
       showMarketCatalog,
       requestExitSaleMode,
