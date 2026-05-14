@@ -1595,12 +1595,34 @@ import {
           const username = normalizeUsername(identificador);
           const usernameSnap = await getDoc(doc(db, "usernames", username));
 
-          if (!usernameSnap.exists()) {
-            alert('No existe una cuenta con ese nombre de usuario.');
-            return;
-          }
+          if (usernameSnap.exists()) {
+            correoLogin = usernameSnap.data().correo;
+          } else {
+            const usuariosQuery = query(
+              collection(db, "usuarios"),
+              where("nombre_usuario", "==", username)
+            );
 
-          correoLogin = usernameSnap.data().correo;
+            const usuariosSnapshot = await getDocs(usuariosQuery);
+
+            if (!usuariosSnapshot.empty) {
+              correoLogin = usuariosSnapshot.docs[0].data().correo;
+            } else {
+              const empresasQuery = query(
+                collection(db, "empresas"),
+                where("nombre_usuario", "==", username)
+              );
+
+              const empresasSnapshot = await getDocs(empresasQuery);
+
+              if (!empresasSnapshot.empty) {
+                correoLogin = empresasSnapshot.docs[0].data().correo;
+              } else {
+                alert('No existe una cuenta con ese nombre de usuario.');
+                return;
+              }
+            }
+          }
         }
 
         const credenciales = await signInWithEmailAndPassword(auth, correoLogin, contrasena);
