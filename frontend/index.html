@@ -18,17 +18,17 @@
       </div>
 
       <h1 id="authTitle" class="login-title">Inicio de sesion</h1>
-      <p id="authText" class="login-text">Entra con tu cuenta verificada para comprar, guardar favoritos o administrar productos como empresa.</p>
+      <p id="authText" class="login-text">Entra con tu correo o nombre de usuario. El sistema detectara automaticamente si eres usuario, empresa o administrador.</p>
 
-      <div class="login-type-box">
+      <div id="authTypeBox" class="login-type-box">
         <button class="login-type-button active" type="button" data-role="usuario">Usuario</button>
         <button class="login-type-button" type="button" data-role="empresa">Empresa</button>
       </div>
 
       <form id="loginForm">
         <div class="form-group">
-          <label id="emailLabel" class="form-label" for="emailInput">Correo del usuario</label>
-          <input id="emailInput" class="form-input" type="email" placeholder="ejemplo@correo.com" required>
+          <label id="emailLabel" class="form-label" for="emailInput">Correo o nombre de usuario</label>
+          <input id="emailInput" class="form-input" type="text" placeholder="correo@ejemplo.com o usuario" required>
         </div>
 
         <div class="form-group">
@@ -45,12 +45,12 @@
           <input id="registerNameInput" class="form-input" type="text" placeholder="Tu nombre completo" required>
         </div>
 
-        <div id="userRegisterFields">
-          <div class="form-group">
-            <label class="form-label" for="registerUsernameInput">Nombre de usuario</label>
-            <input id="registerUsernameInput" class="form-input" type="text" placeholder="Ejemplo: jorge_dc">
-          </div>
+        <div class="form-group">
+          <label class="form-label" for="registerUsernameInput">Nombre de usuario</label>
+          <input id="registerUsernameInput" class="form-input" type="text" placeholder="Ejemplo: jorge_dc o tech_store" required>
+        </div>
 
+        <div id="userRegisterFields">
           <div class="form-group">
             <label class="form-label" for="registerUserLocationInput">Provincia o zona</label>
             <input id="registerUserLocationInput" class="form-input" type="text" placeholder="Ejemplo: Herrera, Panama">
