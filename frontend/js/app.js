@@ -184,7 +184,7 @@ import {
         products = productosSnapshot.docs.map((productDoc) => {
           const product = productDoc.data();
           const precio = Number(product.precio || product.price || 0);
-          const estrellas = Number(product.estrellas || product.rating || 3);
+          const promedio = Number(product.calificacion_promedio_producto || product.estrellas || product.rating || 0);
 
           return {
             id: productDoc.id,
@@ -195,19 +195,26 @@ import {
             id_categoria: product.id_categoria || product.category || null,
             name: product.nombre || product.name || "Producto sin nombre",
             nombre: product.nombre || product.name || "Producto sin nombre",
-            description: product.descripcion || product.description || "Sin descripcion",
-            descripcion: product.descripcion || product.description || "Sin descripcion",
+            description: product.descripcion || product.description || product.descripcion_corta || "Sin descripcion",
+            descripcion: product.descripcion || product.description || product.descripcion_corta || "Sin descripcion",
+            descripcion_corta: product.descripcion_corta || product.descripcion || product.description || "Sin descripcion",
+            descripcion_completa: product.descripcion_completa || product.descripcion || product.description || "Sin descripcion",
+            marca: product.marca || "",
+            modelo: product.modelo || "",
+            condicion: product.condicion || "nuevo",
+            garantia: product.garantia || "",
             price: precio,
             precio: precio,
             image: product.imagen || product.image || baseImages[0],
             imagen: product.imagen || product.image || baseImages[0],
-            rating: estrellas,
-            estrellas: estrellas,
+            rating: promedio,
+            estrellas: promedio,
+            total_calificaciones_producto: Number(product.total_calificaciones_producto || 0),
             stock: Number(product.stock || 0),
             estado: product.estado || "activo",
             date: formatFirebaseDate(product.fecha_publicacion || product.date),
             economical: precio < 30,
-            recommended: estrellas > 3,
+            recommended: promedio > 3,
             nombre_empresa: product.nombre_empresa || "Sin empresa"
           };
         });
@@ -614,9 +621,9 @@ import {
     function getSetDescription() {
       const descriptions = {
         todos: 'Muestra todos los productos sin aplicar operacion de conjuntos.',
-        union: 'A U B: muestra productos economicos, recomendados o ambas cosas.',
-        interseccion: 'A ∩ B: muestra productos economicos y recomendados al mismo tiempo.',
-        complemento: 'A - B: muestra productos economicos que no estan dentro de los recomendados.',
+        union: 'A U B: muestra productos con precio menor a $30, con promedio mayor a 3 estrellas o ambas cosas.',
+        interseccion: 'A ∩ B: muestra productos con precio menor a $30 y promedio mayor a 3 estrellas.',
+        complemento: 'A - B: muestra productos con precio menor a $30 que aun no son recomendados por calificacion.',
         diferencia: 'A Δ B: muestra productos que cumplen solo una condicion, pero no ambas.'
       };
 
@@ -732,9 +739,9 @@ import {
 
             <select id="setFilter" class="filter-select">
               <option value="todos" ${setOperation === 'todos' ? 'selected' : ''}>Todos</option>
-              <option value="union" ${setOperation === 'union' ? 'selected' : ''}>Economicos o recomendados</option>
-              <option value="interseccion" ${setOperation === 'interseccion' ? 'selected' : ''}>Economicos y recomendados</option>
-              <option value="complemento" ${setOperation === 'complemento' ? 'selected' : ''}>Economicos no recomendados</option>
+              <option value="union" ${setOperation === 'union' ? 'selected' : ''}>Precio bajo o bien calificados</option>
+              <option value="interseccion" ${setOperation === 'interseccion' ? 'selected' : ''}>Precio bajo y bien calificados</option>
+              <option value="complemento" ${setOperation === 'complemento' ? 'selected' : ''}>Precio bajo sin recomendacion</option>
               <option value="diferencia" ${setOperation === 'diferencia' ? 'selected' : ''}>Solo una condicion</option>
             </select>
           </div>
@@ -1039,7 +1046,7 @@ import {
 
           <div class="panel">
             <h3>${product.name || product.nombre}</h3>
-            <p>${product.description || product.descripcion || "Sin descripcion"}</p>
+            <p>${product.descripcion_completa || product.description || product.descripcion || "Sin descripcion"}</p>
 
             <div class="product-meta">
               <span>$${product.price || product.precio}</span>
@@ -1060,6 +1067,10 @@ import {
             <br>
 
             <p><strong>Empresa:</strong> ${product.nombre_empresa || "Sin empresa"}</p>
+            <p><strong>Marca:</strong> ${product.marca || "No indicada"}</p>
+            <p><strong>Modelo:</strong> ${product.modelo || "No indicado"}</p>
+            <p><strong>Condicion:</strong> ${product.condicion || "No indicada"}</p>
+            <p><strong>Garantia:</strong> ${product.garantia || "No indicada"}</p>
             <p><strong>Stock:</strong> ${product.stock || 0}</p>
             <p><strong>Fecha:</strong> ${product.date || "Sin fecha"}</p>
 
@@ -1174,6 +1185,25 @@ import {
           await addDoc(collection(db, collectionName), ratingData);
         }
 
+        const updatedRatings = await getRatings(collectionName, fieldName, targetId);
+        const updatedAverage = getRatingAverage(updatedRatings);
+
+        if (collectionName === "calificaciones_productos") {
+          await updateDoc(doc(db, "productos", targetId), {
+            calificacion_promedio_producto: updatedAverage.average,
+            total_calificaciones_producto: updatedAverage.total
+          });
+        }
+
+        if (collectionName === "calificaciones_empresas") {
+          await updateDoc(doc(db, "empresas", targetId), {
+            calificacion_promedio_empresa: updatedAverage.average,
+            total_calificaciones_empresa: updatedAverage.total
+          });
+        }
+
+        await loadData();
+
         alert("Calificacion guardada correctamente.");
       } catch (error) {
         alert("No se pudo guardar la calificacion.");
@@ -1204,23 +1234,51 @@ import {
 
           <form id="productForm" class="form-grid">
             <div class="form-group">
-              <label class="form-label">Nombre</label>
+              <label class="form-label">Nombre del producto</label>
               <input id="productName" class="form-input" type="text" value="${product ? (product.name || product.nombre) : ''}" required>
             </div>
 
             <div class="form-group">
-              <label class="form-label">Precio</label>
-              <input id="productPrice" class="form-input" type="number" min="0" value="${product ? (product.price || product.precio) : ''}" required>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Estrellas</label>
-              <input id="productRating" class="form-input" type="number" min="1" max="5" value="${product ? (product.rating || product.estrellas || 3) : 3}" required>
-            </div>
-
-            <div class="form-group">
               <label class="form-label">Categoria</label>
-              <input id="productCategory" class="form-input" type="text" value="${product ? (product.category || product.nombre_categoria || '') : ''}" required>
+              <select id="productCategory" class="form-select" required>
+                ${['Tecnologia', 'Gaming', 'Audio', 'Oficina', 'Hogar', 'Comida', 'Ropa', 'Otros'].map((category) => `
+                  <option value="${category}" ${product && (product.category || product.nombre_categoria) === category ? 'selected' : ''}>${category}</option>
+                `).join('')}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Precio</label>
+              <input id="productPrice" class="form-input" type="number" min="0" step="0.01" value="${product ? (product.price || product.precio) : ''}" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Stock disponible</label>
+              <input id="productStock" class="form-input" type="number" min="0" value="${product ? (product.stock || 0) : 1}" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Marca</label>
+              <input id="productBrand" class="form-input" type="text" value="${product ? (product.marca || '') : ''}" placeholder="Ejemplo: Lenovo, Samsung, Logitech">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Modelo</label>
+              <input id="productModel" class="form-input" type="text" value="${product ? (product.modelo || '') : ''}" placeholder="Modelo o referencia">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Condicion</label>
+              <select id="productCondition" class="form-select">
+                <option value="nuevo" ${product && product.condicion === 'nuevo' ? 'selected' : ''}>Nuevo</option>
+                <option value="usado" ${product && product.condicion === 'usado' ? 'selected' : ''}>Usado</option>
+                <option value="reacondicionado" ${product && product.condicion === 'reacondicionado' ? 'selected' : ''}>Reacondicionado</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Garantia</label>
+              <input id="productWarranty" class="form-input" type="text" value="${product ? (product.garantia || '') : ''}" placeholder="Ejemplo: 30 dias, 6 meses, sin garantia">
             </div>
 
             <div class="form-group">
@@ -1239,20 +1297,20 @@ import {
             </div>
 
             <div class="form-group">
-              <label class="form-label">Descripcion</label>
-              <textarea id="productDescription" class="form-textarea">${product ? (product.description || product.descripcion || '') : ''}</textarea>
+              <label class="form-label">Descripcion corta</label>
+              <textarea id="productShortDescription" class="form-textarea" placeholder="Resumen breve para la tarjeta">${product ? (product.descripcion_corta || product.description || product.descripcion || '') : ''}</textarea>
             </div>
 
             <div class="form-group">
-              <label class="checkbox-line">
-                <input id="productEconomical" type="checkbox" ${product && (product.economical || Number(product.price || product.precio) < 30) ? 'checked' : ''}>
-                Pertenece a A: Economico
-              </label>
+              <label class="form-label">Descripcion completa</label>
+              <textarea id="productFullDescription" class="form-textarea" placeholder="Detalles completos del producto">${product ? (product.descripcion_completa || product.description || product.descripcion || '') : ''}</textarea>
+            </div>
 
-              <label class="checkbox-line">
-                <input id="productRecommended" type="checkbox" ${product && (product.recommended || Number(product.rating || product.estrellas || 3) > 3) ? 'checked' : ''}>
-                Pertenece a B: Recomendado
-              </label>
+            <div class="panel">
+              <h3>Clasificacion automatica</h3>
+              <p>Economico se calcula solo si el precio es menor a $30.</p>
+              <p>Recomendado se calcula solo cuando el promedio de calificaciones sea mayor a 3 estrellas.</p>
+              <p>La empresa no puede elegir las estrellas; las calificaciones las dan los usuarios.</p>
             </div>
 
             <button class="primary-button" type="submit">${editing ? 'Guardar cambios' : 'Crear producto'}</button>
@@ -1266,18 +1324,25 @@ import {
         const categoryName = document.getElementById('productCategory').value.trim();
         const companyId = getCurrentCompanyId();
         const companyName = currentAccount?.nombre_empresa || currentAccount?.nombre || "Mi empresa";
+        const shortDescription = document.getElementById('productShortDescription').value.trim();
+        const fullDescription = document.getElementById('productFullDescription').value.trim();
 
         const data = {
           id_empresa: companyId,
           id_categoria: getCategoryIdByName(categoryName),
           nombre_categoria: categoryName,
           nombre: document.getElementById('productName').value.trim(),
-          descripcion: document.getElementById('productDescription').value.trim(),
+          descripcion: shortDescription || fullDescription || "Sin descripcion",
+          descripcion_corta: shortDescription || "Sin descripcion",
+          descripcion_completa: fullDescription || shortDescription || "Sin descripcion",
           precio: Number(document.getElementById('productPrice').value),
           imagen: document.getElementById('productImage').value.trim() || baseImages[0],
-          estrellas: Number(document.getElementById('productRating').value),
-          stock: 1,
-          estado: "activo",
+          stock: Number(document.getElementById('productStock').value),
+          marca: document.getElementById('productBrand').value.trim(),
+          modelo: document.getElementById('productModel').value.trim(),
+          condicion: document.getElementById('productCondition').value,
+          garantia: document.getElementById('productWarranty').value.trim(),
+          estado: editing ? (product.estado || "activo") : "activo",
           nombre_empresa: companyName,
           fecha_publicacion: document.getElementById('productDate').value || new Date().toISOString().slice(0, 10)
         };
