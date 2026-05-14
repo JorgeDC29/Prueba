@@ -33,10 +33,11 @@ import {
     let favoriteProducts = [];
 
     let productSearch = '';
-    let priceOrder = '';
     let selectedCategory = '';
-    let dateOrder = '';
-    let setOperation = 'todos';
+    let priceRange = '';
+    let minRating = '';
+    let statusFilter = '';
+    let sortOrder = 'new';
     let companyPassword = '1234';
     let companyMarketId = 1;
     let saleModeActive = false;
@@ -689,61 +690,138 @@ import {
 
     function getFilteredProducts() {
       let filtered = [...products];
+      const activeSection = document.querySelector('.dashboard-item.active')?.dataset.section;
 
       if (productSearch.trim() !== '') {
         const term = productSearch.toLowerCase();
+
         filtered = filtered.filter((product) => {
           return String(product.name || product.nombre || '').toLowerCase().includes(term) ||
                  String(product.description || product.descripcion || '').toLowerCase().includes(term) ||
-                 String(product.category || product.nombre_categoria || '').toLowerCase().includes(term);
+                 String(product.descripcion_completa || '').toLowerCase().includes(term) ||
+                 String(product.category || product.nombre_categoria || '').toLowerCase().includes(term) ||
+                 String(product.marca || '').toLowerCase().includes(term) ||
+                 String(product.modelo || '').toLowerCase().includes(term) ||
+                 String(product.nombre_empresa || '').toLowerCase().includes(term);
         });
       }
 
       if (selectedCategory !== '') {
-        filtered = filtered.filter((product) => (product.category || product.nombre_categoria) === selectedCategory);
+        filtered = filtered.filter((product) => {
+          return (product.category || product.nombre_categoria) === selectedCategory;
+        });
       }
 
-      const setData = getSetResult(filtered);
-      filtered = filtered.filter((product, index) => setData.result[index] === 1);
+      if (priceRange === 'under30') {
+        filtered = filtered.filter((product) => Number(product.price || product.precio) < 30);
+      }
 
-      if (priceOrder === 'asc') filtered.sort((a, b) => a.price - b.price);
-      if (priceOrder === 'desc') filtered.sort((a, b) => b.price - a.price);
-      if (dateOrder === 'new') filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-      if (dateOrder === 'old') filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
+      if (priceRange === '30to100') {
+        filtered = filtered.filter((product) => {
+          const price = Number(product.price || product.precio);
+          return price >= 30 && price <= 100;
+        });
+      }
+
+      if (priceRange === '100to300') {
+        filtered = filtered.filter((product) => {
+          const price = Number(product.price || product.precio);
+          return price > 100 && price <= 300;
+        });
+      }
+
+      if (priceRange === 'over300') {
+        filtered = filtered.filter((product) => Number(product.price || product.precio) > 300);
+      }
+
+      if (minRating !== '' && activeSection !== 'mis-productos' && activeSection !== 'venta') {
+        filtered = filtered.filter((product) => Number(product.rating || product.estrellas || 0) >= Number(minRating));
+      }
+
+      if (statusFilter !== '' && activeSection === 'mis-productos') {
+        filtered = filtered.filter((product) => {
+          if (statusFilter === 'activo') return product.estado !== 'inhabilitado';
+          if (statusFilter === 'inhabilitado') return product.estado === 'inhabilitado';
+          return true;
+        });
+      }
+
+      if (sortOrder === 'new') {
+        filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+      }
+
+      if (sortOrder === 'old') {
+        filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
+      }
+
+      if (sortOrder === 'priceAsc') {
+        filtered.sort((a, b) => Number(a.price || a.precio) - Number(b.price || b.precio));
+      }
+
+      if (sortOrder === 'priceDesc') {
+        filtered.sort((a, b) => Number(b.price || b.precio) - Number(a.price || a.precio));
+      }
+
+      if (sortOrder === 'ratingDesc') {
+        filtered.sort((a, b) => Number(b.rating || b.estrellas || 0) - Number(a.rating || a.estrellas || 0));
+      }
+
+      if (sortOrder === 'nameAsc') {
+        filtered.sort((a, b) => String(a.name || a.nombre || '').localeCompare(String(b.name || b.nombre || '')));
+      }
 
       return filtered;
     }
 
     function createProductToolbar() {
+      const activeSection = document.querySelector('.dashboard-item.active')?.dataset.section;
+      const isMyProducts = activeSection === 'mis-productos';
+      const isSaleMode = activeSection === 'venta';
+
       return `
         <div class="toolbar">
-          <input id="productSearchInput" class="search-input" type="text" placeholder="Buscar producto..." value="${productSearch}">
+          <input id="productSearchInput" class="search-input" type="text" placeholder="Buscar por producto, marca, modelo o empresa..." value="${productSearch}">
 
           <div class="filter-row">
-            <select id="priceFilter" class="filter-select">
-              <option value="">Orden de precio</option>
-              <option value="asc" ${priceOrder === 'asc' ? 'selected' : ''}>Menor a mayor</option>
-              <option value="desc" ${priceOrder === 'desc' ? 'selected' : ''}>Mayor a menor</option>
-            </select>
-
             <select id="categoryFilter" class="filter-select">
-              <option value="">Categoria</option>
+              <option value="">Todas las categorias</option>
               ${getCategories().map((category) => `<option value="${category}" ${selectedCategory === category ? 'selected' : ''}>${category}</option>`).join('')}
             </select>
 
-            <select id="dateFilter" class="filter-select">
-              <option value="">Fecha de publicacion</option>
-              <option value="new" ${dateOrder === 'new' ? 'selected' : ''}>Mas recientes</option>
-              <option value="old" ${dateOrder === 'old' ? 'selected' : ''}>Mas antiguos</option>
+            <select id="priceRangeFilter" class="filter-select">
+              <option value="">Todos los precios</option>
+              <option value="under30" ${priceRange === 'under30' ? 'selected' : ''}>Menos de $30</option>
+              <option value="30to100" ${priceRange === '30to100' ? 'selected' : ''}>$30 - $100</option>
+              <option value="100to300" ${priceRange === '100to300' ? 'selected' : ''}>$100 - $300</option>
+              <option value="over300" ${priceRange === 'over300' ? 'selected' : ''}>Mas de $300</option>
             </select>
 
-            <select id="setFilter" class="filter-select">
-              <option value="todos" ${setOperation === 'todos' ? 'selected' : ''}>Todos</option>
-              <option value="union" ${setOperation === 'union' ? 'selected' : ''}>Precio bajo o bien calificados</option>
-              <option value="interseccion" ${setOperation === 'interseccion' ? 'selected' : ''}>Precio bajo y bien calificados</option>
-              <option value="complemento" ${setOperation === 'complemento' ? 'selected' : ''}>Precio bajo sin recomendacion</option>
-              <option value="diferencia" ${setOperation === 'diferencia' ? 'selected' : ''}>Solo una condicion</option>
-            </select>
+            ${!isMyProducts && !isSaleMode ? `
+              <select id="ratingFilter" class="filter-select">
+                <option value="">Cualquier calificacion</option>
+                <option value="4" ${minRating === '4' ? 'selected' : ''}>4 estrellas o mas</option>
+                <option value="3" ${minRating === '3' ? 'selected' : ''}>3 estrellas o mas</option>
+              </select>
+            ` : ''}
+
+            ${isMyProducts ? `
+              <select id="statusFilter" class="filter-select">
+                <option value="">Todos los estados</option>
+                <option value="activo" ${statusFilter === 'activo' ? 'selected' : ''}>Activos</option>
+                <option value="inhabilitado" ${statusFilter === 'inhabilitado' ? 'selected' : ''}>Inhabilitados</option>
+              </select>
+            ` : ''}
+
+            ${!isSaleMode ? `
+              <select id="sortFilter" class="filter-select">
+                <option value="new" ${sortOrder === 'new' ? 'selected' : ''}>Mas recientes</option>
+                <option value="old" ${sortOrder === 'old' ? 'selected' : ''}>Mas antiguos</option>
+                <option value="priceAsc" ${sortOrder === 'priceAsc' ? 'selected' : ''}>Menor precio</option>
+                <option value="priceDesc" ${sortOrder === 'priceDesc' ? 'selected' : ''}>Mayor precio</option>
+                <option value="ratingDesc" ${sortOrder === 'ratingDesc' ? 'selected' : ''}>Mejor calificados</option>
+                <option value="nameAsc" ${sortOrder === 'nameAsc' ? 'selected' : ''}>Nombre A-Z</option>
+              </select>
+            ` : ''}
           </div>
         </div>
       `;
@@ -751,37 +829,62 @@ import {
 
     function activateProductToolbar(renderFunction) {
       const searchInput = document.getElementById('productSearchInput');
-      const priceFilter = document.getElementById('priceFilter');
       const categoryFilter = document.getElementById('categoryFilter');
-      const dateFilter = document.getElementById('dateFilter');
-      const setFilter = document.getElementById('setFilter');
+      const priceRangeFilter = document.getElementById('priceRangeFilter');
+      const ratingFilter = document.getElementById('ratingFilter');
+      const statusFilterElement = document.getElementById('statusFilter');
+      const sortFilter = document.getElementById('sortFilter');
 
-      if (!searchInput || !priceFilter || !categoryFilter || !dateFilter || !setFilter) return;
+      if (searchInput) {
+        searchInput.addEventListener('input', (event) => {
+          productSearch = event.target.value;
+          renderFunction();
+        });
+      }
 
-      searchInput.addEventListener('input', (event) => {
-        productSearch = event.target.value;
-        renderFunction();
-      });
+      if (categoryFilter) {
+        categoryFilter.addEventListener('change', (event) => {
+          selectedCategory = event.target.value;
+          renderFunction();
+        });
+      }
 
-      priceFilter.addEventListener('change', (event) => {
-        priceOrder = event.target.value;
-        renderFunction();
-      });
+      if (priceRangeFilter) {
+        priceRangeFilter.addEventListener('change', (event) => {
+          priceRange = event.target.value;
+          renderFunction();
+        });
+      }
 
-      categoryFilter.addEventListener('change', (event) => {
-        selectedCategory = event.target.value;
-        renderFunction();
-      });
+      if (ratingFilter) {
+        ratingFilter.addEventListener('change', (event) => {
+          minRating = event.target.value;
+          renderFunction();
+        });
+      }
 
-      dateFilter.addEventListener('change', (event) => {
-        dateOrder = event.target.value;
-        renderFunction();
-      });
+      if (statusFilterElement) {
+        statusFilterElement.addEventListener('change', (event) => {
+          statusFilter = event.target.value;
+          renderFunction();
+        });
+      }
 
-      setFilter.addEventListener('change', (event) => {
-        setOperation = event.target.value;
-        renderFunction();
-      });
+      if (sortFilter) {
+        sortFilter.addEventListener('change', (event) => {
+          sortOrder = event.target.value;
+          renderFunction();
+        });
+      }
+    }
+
+    function resetProductFilters() {
+      productSearch = '';
+      selectedCategory = '';
+      priceRange = '';
+      minRating = '';
+      statusFilter = '';
+      sortOrder = 'new';
     }
 
     function renderProductsSection() {
