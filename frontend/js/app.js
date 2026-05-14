@@ -43,6 +43,10 @@ import {
     let authToken = localStorage.getItem('tiendaTechUid') || '';
     let authMode = 'login';
 
+    const ADMIN_EMAILS = [
+      "jorge.delacruz170705@gmail.com"
+    ];
+
     const userDashboardOptions = [
       { name: 'Inicio', section: 'inicio', icon: 'home' },
       { name: 'Productos', section: 'productos', icon: 'inventory_2' },
@@ -103,6 +107,10 @@ import {
 
     function getCurrentUserEmail() {
       return currentAccount?.correo || 'Sin correo';
+    }
+
+    function isAdminAccount() {
+      return currentAccount?.correo && ADMIN_EMAILS.includes(currentAccount.correo.toLowerCase());
     }
 
     function getCategoryIdByName(categoryName) {
@@ -367,7 +375,15 @@ import {
     /* ========================================================= */
 
     function renderDashboard(role) {
-      const options = role === 'usuario' ? userDashboardOptions : companyDashboardOptions;
+      let options = role === 'usuario' ? [...userDashboardOptions] : [...companyDashboardOptions];
+
+      if (isAdminAccount()) {
+        options.push({
+          name: 'Admin',
+          section: 'admin',
+          icon: 'admin_panel_settings'
+        });
+      }
 
       dashboard.innerHTML = options.map((option, index) => `
         <button class="dashboard-item ${index === 0 ? 'active' : ''} ${option.section === 'perfil' ? 'profile-bottom' : ''}" type="button" data-section="${option.section}">
@@ -403,6 +419,7 @@ import {
       if (sectionName === 'favoritos') renderFavorites();
       if (sectionName === 'perfil') renderProfile();
       if (sectionName === 'venta') startSaleMode();
+      if (sectionName === 'admin') renderAdminSection();
     }
 
     /* ========================================================= */
@@ -1275,6 +1292,160 @@ import {
     }
 
     /* ========================================================= */
+    /* ADMINISTRACION */
+    /* ========================================================= */
+
+    async function renderAdminSection() {
+      if (!isAdminAccount()) {
+        sectionTitle.textContent = 'Acceso denegado';
+        sectionActions.innerHTML = '';
+        dynamicContent.innerHTML = `
+          <div class="empty-state">
+            <h3>No tienes permisos de administrador</h3>
+            <p>Esta seccion solo esta disponible para cuentas autorizadas.</p>
+          </div>
+        `;
+        return;
+      }
+
+      sectionTitle.textContent = 'Panel de administrador';
+      sectionActions.innerHTML = `<button class="secondary-button" type="button" onclick="renderAdminSection()">Actualizar</button>`;
+
+      try {
+        const empresasSnapshot = await getDocs(collection(db, "empresas"));
+
+        const empresas = empresasSnapshot.docs.map((empresaDoc) => ({
+          id: empresaDoc.id,
+          ...empresaDoc.data()
+        }));
+
+        const pendientes = empresas.filter((empresa) => empresa.aprobado !== true && empresa.estado !== "rechazada");
+        const aprobadas = empresas.filter((empresa) => empresa.aprobado === true);
+        const rechazadas = empresas.filter((empresa) => empresa.estado === "rechazada");
+
+        dynamicContent.innerHTML = `
+          <div class="panel-grid">
+            <div class="panel">
+              <h3>Resumen</h3>
+              <div class="mini-stats">
+                <div class="stat-card"><span class="stat-number">${pendientes.length}</span><span class="stat-label">Pendientes</span></div>
+                <div class="stat-card"><span class="stat-number">${aprobadas.length}</span><span class="stat-label">Aprobadas</span></div>
+                <div class="stat-card"><span class="stat-number">${rechazadas.length}</span><span class="stat-label">Rechazadas</span></div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <h3>Funcion del admin</h3>
+              <p>Desde aqui puedes aprobar empresas para que aparezcan en Mercados y puedan publicar productos.</p>
+            </div>
+          </div>
+
+          <section class="home-product-section">
+            <div class="home-product-header">
+              <div>
+                <h3>Empresas pendientes</h3>
+                <p>Revisa los datos antes de aprobar una empresa.</p>
+              </div>
+              <span>${pendientes.length} pendientes</span>
+            </div>
+
+            ${pendientes.length === 0 ? `
+              <div class="empty-state">
+                <h3>Sin empresas pendientes</h3>
+                <p>No hay solicitudes nuevas por aprobar.</p>
+              </div>
+            ` : `
+              <div class="market-grid">
+                ${pendientes.map((empresa) => createAdminCompanyCard(empresa)).join('')}
+              </div>
+            `}
+          </section>
+        `;
+      } catch (error) {
+        dynamicContent.innerHTML = `
+          <div class="empty-state">
+            <h3>Error al cargar empresas</h3>
+            <p>No se pudo consultar Firestore.</p>
+          </div>
+        `;
+      }
+    }
+
+    function createAdminCompanyCard(empresa) {
+      return `
+        <article class="market-card">
+          <div>
+            <div class="market-logo">${empresa.logo || (empresa.nombre_empresa || 'TT').slice(0, 2).toUpperCase()}</div>
+            <h3 class="market-name">${empresa.nombre_empresa || empresa.nombre || 'Empresa sin nombre'}</h3>
+            <p class="market-description">${empresa.descripcion || 'Sin descripcion registrada.'}</p>
+            <p class="market-description"><strong>Correo:</strong> ${empresa.correo || 'Sin correo'}</p>
+            <p class="market-description"><strong>Encargado:</strong> ${empresa.encargado || 'No indicado'}</p>
+            <p class="market-description"><strong>Telefono:</strong> ${empresa.telefono || 'No indicado'}</p>
+            <p class="market-description"><strong>Direccion:</strong> ${empresa.direccion || 'No indicada'}</p>
+            <p class="market-description"><strong>Categoria:</strong> ${empresa.categoria_principal || 'No indicada'}</p>
+          </div>
+
+          <div class="card-actions">
+            <button class="small-button" type="button" onclick='approveCompany(${jsString(empresa.id)})'>Aprobar</button>
+            <button class="small-button danger" type="button" onclick='rejectCompany(${jsString(empresa.id)})'>Rechazar</button>
+          </div>
+        </article>
+      `;
+    }
+
+    async function approveCompany(companyId) {
+      if (!isAdminAccount()) {
+        alert('No tienes permisos de administrador.');
+        return;
+      }
+
+      const confirmApprove = confirm('Aprobar esta empresa? Podra aparecer en Mercados y publicar productos.');
+
+      if (!confirmApprove) return;
+
+      try {
+        await updateDoc(doc(db, "empresas", companyId), {
+          aprobado: true,
+          estado: "aprobada",
+          aprobado_por: currentAccount.correo,
+          fecha_aprobacion: serverTimestamp()
+        });
+
+        alert('Empresa aprobada correctamente.');
+        await loadData();
+        renderAdminSection();
+      } catch (error) {
+        alert('No se pudo aprobar la empresa.');
+      }
+    }
+
+    async function rejectCompany(companyId) {
+      if (!isAdminAccount()) {
+        alert('No tienes permisos de administrador.');
+        return;
+      }
+
+      const confirmReject = confirm('Rechazar esta empresa? No aparecera en Mercados ni podra publicar.');
+
+      if (!confirmReject) return;
+
+      try {
+        await updateDoc(doc(db, "empresas", companyId), {
+          aprobado: false,
+          estado: "rechazada",
+          rechazado_por: currentAccount.correo,
+          fecha_rechazo: serverTimestamp()
+        });
+
+        alert('Empresa rechazada correctamente.');
+        await loadData();
+        renderAdminSection();
+      } catch (error) {
+        alert('No se pudo rechazar la empresa.');
+      }
+    }
+
+    /* ========================================================= */
     /* EVENTOS */
     /* ========================================================= */
 
@@ -1472,7 +1643,10 @@ import {
       requestExitSaleMode,
       changeSection,
       renderFavorites,
-      loadFavorites
+      loadFavorites,
+      renderAdminSection,
+      approveCompany,
+      rejectCompany
     });
 
     setAuthMode('login');
