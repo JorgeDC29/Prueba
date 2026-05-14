@@ -635,7 +635,7 @@ import {
       const marketName = product.nombre_empresa || (market ? market.name : 'Sin mercado');
 
       return `
-        <article class="product-card">
+        <article class="product-card" onclick='showProductDetail(${jsString(productId)})'>
           <div class="product-image-box">
             <img class="product-image" src="${product.image || product.imagen || baseImages[0]}" alt="${product.name || product.nombre}">
           </div>
@@ -665,13 +665,13 @@ import {
 
             <div class="card-actions">
               ${selectedRole === 'usuario' ? `
-                <button class="small-button ${isFavorite ? 'active' : ''}" type="button" onclick='toggleFavorite(${jsString(productId)})'>${isFavorite ? 'Guardado' : 'Guardar'}</button>
+                <button class="small-button ${isFavorite ? 'active' : ''}" type="button" onclick='event.stopPropagation(); toggleFavorite(${jsString(productId)})'>${isFavorite ? 'Guardado' : 'Guardar'}</button>
               ` : activeSection === 'mis-productos' ? `
-                <button class="small-button" type="button" onclick='showProductForm(${jsString(productId)})'>Editar</button>
+                <button class="small-button" type="button" onclick='event.stopPropagation(); showProductForm(${jsString(productId)})'>Editar</button>
                 ${product.estado === "inhabilitado" ? `
-                  <button class="small-button" type="button" onclick='enableProduct(${jsString(productId)})'>Reactivar</button>
+                  <button class="small-button" type="button" onclick='event.stopPropagation(); enableProduct(${jsString(productId)})'>Reactivar</button>
                 ` : `
-                  <button class="small-button danger" type="button" onclick='disableProduct(${jsString(productId)})'>Inhabilitar</button>
+                  <button class="small-button danger" type="button" onclick='event.stopPropagation(); disableProduct(${jsString(productId)})'>Inhabilitar</button>
                 `}
               ` : ''}
             </div>
@@ -895,6 +895,289 @@ import {
       `;
 
       activateProductToolbar(renderMyProductsSection);
+    }
+
+    async function getRatings(collectionName, fieldName, value) {
+      try {
+        const ratingsQuery = query(
+          collection(db, collectionName),
+          where(fieldName, "==", value),
+          where("estado", "==", "activo")
+        );
+
+        const ratingsSnapshot = await getDocs(ratingsQuery);
+
+        return ratingsSnapshot.docs.map((ratingDoc) => ({
+          id: ratingDoc.id,
+          ...ratingDoc.data()
+        }));
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function getRatingAverage(ratings) {
+      if (ratings.length === 0) {
+        return {
+          average: 0,
+          total: 0
+        };
+      }
+
+      const totalPoints = ratings.reduce((sum, rating) => sum + Number(rating.puntuacion || 0), 0);
+      const average = Math.round(totalPoints / ratings.length);
+
+      return {
+        average,
+        total: ratings.length
+      };
+    }
+
+    function createRatingSummary(title, ratings) {
+      const data = getRatingAverage(ratings);
+
+      return `
+        <div class="panel">
+          <h3>${title}</h3>
+          <div class="rating-row">
+            <span>${getStars(data.average)}</span>
+            <strong>${data.average || 0}/5</strong>
+          </div>
+          <p>${data.total} calificaciones registradas.</p>
+        </div>
+      `;
+    }
+
+    function createRatingForm(type, targetId) {
+      if (selectedRole !== "usuario") {
+        return `
+          <div class="panel">
+            <h3>Calificar</h3>
+            <p>Solo las cuentas de usuario pueden calificar productos y empresas.</p>
+          </div>
+        `;
+      }
+
+      const title = type === "producto" ? "Calificar producto" : "Calificar empresa";
+      const formId = type === "producto" ? "productRatingForm" : "companyRatingForm";
+      const selectId = type === "producto" ? "productRatingSelect" : "companyRatingSelect";
+      const commentId = type === "producto" ? "productRatingComment" : "companyRatingComment";
+
+      return `
+        <div class="panel">
+          <h3>${title}</h3>
+          <form id="${formId}" class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Puntuacion</label>
+              <select id="${selectId}" class="form-select">
+                <option value="5">5 estrellas</option>
+                <option value="4">4 estrellas</option>
+                <option value="3">3 estrellas</option>
+                <option value="2">2 estrellas</option>
+                <option value="1">1 estrella</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Comentario opcional</label>
+              <textarea id="${commentId}" class="form-textarea" placeholder="Escribe una opinion breve"></textarea>
+            </div>
+
+            <button class="primary-button" type="submit">Guardar calificacion</button>
+          </form>
+        </div>
+      `;
+    }
+
+    async function showProductDetail(productId) {
+      const product = products.find((item) => String(item.id || item.id_producto) === String(productId));
+
+      if (!product) {
+        sectionTitle.textContent = "Producto no encontrado";
+        sectionActions.innerHTML = `<button class="secondary-button" type="button" onclick="changeSection('productos')">Volver</button>`;
+        dynamicContent.innerHTML = `
+          <div class="empty-state">
+            <h3>No se encontro este producto</h3>
+            <p>Actualiza la pagina o vuelve al catalogo.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const isOwnerCompany = selectedRole === "empresa" && getProductCompanyId(product) === getCurrentCompanyId();
+
+      if (product.estado === "inhabilitado" && !isOwnerCompany) {
+        sectionTitle.textContent = "Producto no disponible";
+        sectionActions.innerHTML = `<button class="secondary-button" type="button" onclick="changeSection('productos')">Volver</button>`;
+        dynamicContent.innerHTML = `
+          <div class="empty-state">
+            <h3>Producto no disponible</h3>
+            <p>Este producto fue inhabilitado por la empresa.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const productRatings = await getRatings("calificaciones_productos", "id_producto", product.id || product.id_producto);
+      const companyRatings = await getRatings("calificaciones_empresas", "id_empresa", getProductCompanyId(product));
+
+      const productAverage = getRatingAverage(productRatings);
+      const companyAverage = getRatingAverage(companyRatings);
+
+      sectionTitle.textContent = product.name || product.nombre || "Detalle del producto";
+      sectionActions.innerHTML = `<button class="secondary-button" type="button" onclick="changeSection('productos')">Volver</button>`;
+
+      const isFavorite = favoriteProducts.includes(product.id || product.id_producto);
+
+      dynamicContent.innerHTML = `
+        <div class="panel-grid">
+          <div class="panel">
+            <div class="product-image-box">
+              <img class="product-image" src="${product.image || product.imagen || baseImages[0]}" alt="${product.name || product.nombre}">
+            </div>
+          </div>
+
+          <div class="panel">
+            <h3>${product.name || product.nombre}</h3>
+            <p>${product.description || product.descripcion || "Sin descripcion"}</p>
+
+            <div class="product-meta">
+              <span>$${product.price || product.precio}</span>
+              <span>${product.category || product.nombre_categoria || "Sin categoria"}</span>
+              <span>${product.estado === "inhabilitado" ? "Inhabilitado" : "Disponible"}</span>
+            </div>
+
+            <div class="rating-row">
+              <span>${getStars(productAverage.average)}</span>
+              <strong>${productAverage.average || 0}/5 producto</strong>
+            </div>
+
+            <div class="rating-row">
+              <span>${getStars(companyAverage.average)}</span>
+              <strong>${companyAverage.average || 0}/5 empresa</strong>
+            </div>
+
+            <br>
+
+            <p><strong>Empresa:</strong> ${product.nombre_empresa || "Sin empresa"}</p>
+            <p><strong>Stock:</strong> ${product.stock || 0}</p>
+            <p><strong>Fecha:</strong> ${product.date || "Sin fecha"}</p>
+
+            ${selectedRole === "usuario" ? `
+              <br>
+              <button class="small-button ${isFavorite ? 'active' : ''}" type="button" onclick='toggleFavorite(${jsString(product.id || product.id_producto)}).then(() => showProductDetail(${jsString(product.id || product.id_producto)}))'>
+                ${isFavorite ? 'Quitar de favoritos' : 'Guardar favorito'}
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        <div class="panel-grid">
+          ${createRatingSummary("Calificacion del producto", productRatings)}
+          ${createRatingSummary("Calificacion de la empresa", companyRatings)}
+        </div>
+
+        <div class="panel-grid">
+          ${createRatingForm("producto", product.id || product.id_producto)}
+          ${createRatingForm("empresa", getProductCompanyId(product))}
+        </div>
+
+        <section class="home-product-section">
+          <div class="home-product-header">
+            <div>
+              <h3>Opiniones del producto</h3>
+              <p>Comentarios recientes de usuarios.</p>
+            </div>
+            <span>${productRatings.length} opiniones</span>
+          </div>
+
+          ${productRatings.length === 0 ? `
+            <div class="empty-state">
+              <h3>Sin opiniones</h3>
+              <p>Aun no hay calificaciones para este producto.</p>
+            </div>
+          ` : `
+            <div class="panel-grid">
+              ${productRatings.slice(0, 6).map((rating) => `
+                <div class="panel">
+                  <div class="rating-row">
+                    <span>${getStars(rating.puntuacion)}</span>
+                    <strong>${rating.puntuacion}/5</strong>
+                  </div>
+                  <p>${rating.comentario || "Sin comentario."}</p>
+                </div>
+              `).join('')}
+            </div>
+          `}
+        </section>
+      `;
+
+      const productRatingForm = document.getElementById("productRatingForm");
+      const companyRatingForm = document.getElementById("companyRatingForm");
+
+      if (productRatingForm) {
+        productRatingForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+
+          await saveRating("calificaciones_productos", "id_producto", product.id || product.id_producto, {
+            puntuacion: Number(document.getElementById("productRatingSelect").value),
+            comentario: document.getElementById("productRatingComment").value.trim()
+          });
+
+          await showProductDetail(product.id || product.id_producto);
+        });
+      }
+
+      if (companyRatingForm) {
+        companyRatingForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+
+          await saveRating("calificaciones_empresas", "id_empresa", getProductCompanyId(product), {
+            puntuacion: Number(document.getElementById("companyRatingSelect").value),
+            comentario: document.getElementById("companyRatingComment").value.trim()
+          });
+
+          await showProductDetail(product.id || product.id_producto);
+        });
+      }
+    }
+
+    async function saveRating(collectionName, fieldName, targetId, data) {
+      if (selectedRole !== "usuario" || !currentAccount?.id_usuario) {
+        alert("Debes iniciar sesion como usuario para calificar.");
+        return;
+      }
+
+      try {
+        const ratingQuery = query(
+          collection(db, collectionName),
+          where("id_usuario", "==", currentAccount.id_usuario),
+          where(fieldName, "==", targetId),
+          where("estado", "==", "activo")
+        );
+
+        const ratingSnapshot = await getDocs(ratingQuery);
+
+        const ratingData = {
+          id_usuario: currentAccount.id_usuario,
+          nombre_usuario: currentAccount.nombre_usuario || currentAccount.nombre || "Usuario",
+          [fieldName]: targetId,
+          puntuacion: data.puntuacion,
+          comentario: data.comentario || "",
+          estado: "activo",
+          fecha: serverTimestamp()
+        };
+
+        if (!ratingSnapshot.empty) {
+          await updateDoc(doc(db, collectionName, ratingSnapshot.docs[0].id), ratingData);
+        } else {
+          await addDoc(collection(db, collectionName), ratingData);
+        }
+
+        alert("Calificacion guardada correctamente.");
+      } catch (error) {
+        alert("No se pudo guardar la calificacion.");
+      }
     }
 
     /* ========================================================= */
@@ -1210,8 +1493,10 @@ import {
     }
 
     function createSaleProductCard(product) {
+      const productId = product.id || product.id_producto;
+
       return `
-        <article class="product-card">
+        <article class="product-card" onclick='showProductDetail(${jsString(productId)})'>
           <div class="product-image-box">
             <img class="product-image" src="${product.image || product.imagen || baseImages[0]}" alt="${product.name || product.nombre}">
           </div>
@@ -1752,6 +2037,8 @@ import {
       changeSection,
       renderFavorites,
       loadFavorites,
+      showProductDetail,
+      saveRating,
       renderAdminSection,
       approveCompany,
       rejectCompany
