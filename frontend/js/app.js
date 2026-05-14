@@ -3,6 +3,7 @@ import { auth, db } from "./firebase.js";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  sendEmailVerification,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 
@@ -123,7 +124,7 @@ import {
     function jsString(value) {
       return JSON.stringify(String(value));
     };
-    
+    }
 
     /* ========================================================= */
     /* DATOS FIREBASE */
@@ -133,23 +134,32 @@ import {
       try {
         const empresasSnapshot = await getDocs(collection(db, "empresas"));
 
-        markets = empresasSnapshot.docs.map((empresaDoc) => {
-          const empresa = empresaDoc.data();
+        markets = empresasSnapshot.docs
+          .map((empresaDoc) => {
+            const empresa = empresaDoc.data();
 
-          return {
-            id: empresaDoc.id,
-            id_empresa: empresaDoc.id,
-            id_usuario: empresa.id_usuario || empresa.uid || empresaDoc.id,
-            name: empresa.nombre_empresa || empresa.nombre || "Empresa sin nombre",
-            nombre_empresa: empresa.nombre_empresa || empresa.nombre || "Empresa sin nombre",
-            logo: empresa.logo || (empresa.nombre_empresa || empresa.nombre || "TT").slice(0, 2).toUpperCase(),
-            description: empresa.descripcion || "Empresa registrada en Tienda Tech.",
-            descripcion: empresa.descripcion || "Empresa registrada en Tienda Tech.",
-            correo: empresa.correo || "",
-            telefono: empresa.telefono || "",
-            direccion: empresa.direccion || ""
-          };
-        });
+            return {
+              id: empresaDoc.id,
+              id_empresa: empresaDoc.id,
+              id_usuario: empresa.id_usuario || empresa.uid || empresaDoc.id,
+              name: empresa.nombre_empresa || empresa.nombre || "Empresa sin nombre",
+              nombre_empresa: empresa.nombre_empresa || empresa.nombre || "Empresa sin nombre",
+              logo: empresa.logo || (empresa.nombre_empresa || empresa.nombre || "TT").slice(0, 2).toUpperCase(),
+              description: empresa.descripcion || "Empresa registrada en Tienda Tech.",
+              descripcion: empresa.descripcion || "Empresa registrada en Tienda Tech.",
+              correo: empresa.correo || "",
+              telefono: empresa.telefono || "",
+              direccion: empresa.direccion || "",
+              categoria_principal: empresa.categoria_principal || "",
+              encargado: empresa.encargado || "",
+              aprobado: empresa.aprobado === true,
+              estado: empresa.estado || "pendiente"
+            };
+          })
+          .filter((empresa) => {
+            if (empresa.aprobado) return true;
+            return currentAccount?.tipo_cuenta === "empresa" && String(currentAccount.id_empresa) === String(empresa.id_empresa);
+          });
 
         const productosQuery = query(
           collection(db, "productos"),
@@ -238,6 +248,9 @@ import {
     const registerEmailLabel = document.getElementById('registerEmailLabel');
     const loginSubmit = document.getElementById('loginSubmit');
     const registerSubmit = document.getElementById('registerSubmit');
+    const registerNameLabel = document.getElementById('registerNameLabel');
+    const userRegisterFields = document.getElementById('userRegisterFields');
+    const companyRegisterFields = document.getElementById('companyRegisterFields');
     const loginTypeButtons = document.querySelectorAll('.login-type-button');
 
     const dashboard = document.getElementById('dashboard');
@@ -262,14 +275,20 @@ import {
         emailLabel.textContent = 'Correo del usuario';
         loginSubmit.textContent = 'Entrar como usuario';
 
+        if (registerNameLabel) registerNameLabel.textContent = 'Nombre completo';
         if (registerEmailLabel) registerEmailLabel.textContent = 'Correo del usuario';
         if (registerSubmit) registerSubmit.textContent = 'Crear cuenta de usuario';
+        if (userRegisterFields) userRegisterFields.classList.remove('hidden');
+        if (companyRegisterFields) companyRegisterFields.classList.add('hidden');
       } else {
         emailLabel.textContent = 'Correo de la empresa';
         loginSubmit.textContent = 'Entrar como empresa';
 
+        if (registerNameLabel) registerNameLabel.textContent = 'Nombre de la empresa';
         if (registerEmailLabel) registerEmailLabel.textContent = 'Correo de la empresa';
         if (registerSubmit) registerSubmit.textContent = 'Crear cuenta de empresa';
+        if (userRegisterFields) userRegisterFields.classList.add('hidden');
+        if (companyRegisterFields) companyRegisterFields.classList.remove('hidden');
       }
     }
 
@@ -800,7 +819,12 @@ import {
 
     function renderMyProductsSection() {
       sectionTitle.textContent = 'Mis productos';
-      sectionActions.innerHTML = `<button class="primary-button" type="button" onclick="showProductForm()">Agregar producto</button>`;
+
+      const isApproved = currentAccount?.aprobado === true;
+
+      sectionActions.innerHTML = isApproved
+        ? `<button class="primary-button" type="button" onclick="showProductForm()">Agregar producto</button>`
+        : '';
 
       const myCompanyId = getCurrentCompanyId();
       const myProducts = getFilteredProducts().filter((product) => {
@@ -808,6 +832,13 @@ import {
       });
 
       dynamicContent.innerHTML = `
+        ${!isApproved ? `
+          <div class="empty-state">
+            <h3>Empresa pendiente de aprobacion</h3>
+            <p>Tu correo ya puede estar verificado, pero tu empresa aun debe ser aprobada antes de publicar productos.</p>
+          </div>
+        ` : ''}
+
         ${createProductToolbar()}
 
         ${myProducts.length === 0 ? `
@@ -828,6 +859,12 @@ import {
     /* ========================================================= */
 
     function showProductForm(productId = null) {
+      if (selectedRole === 'empresa' && currentAccount?.aprobado !== true) {
+        alert('Tu empresa aun esta pendiente de aprobacion. No puedes publicar productos todavia.');
+        renderMyProductsSection();
+        return;
+      }
+
       const editing = productId !== null;
       const product = editing ? products.find((item) => (item.id || item.id_producto) === productId) : null;
 
@@ -1045,6 +1082,12 @@ import {
     /* ========================================================= */
 
     function startSaleMode() {
+      if (selectedRole === 'empresa' && currentAccount?.aprobado !== true) {
+        alert('Tu empresa aun esta pendiente de aprobacion. No puedes activar modo venta todavia.');
+        changeSection('perfil');
+        return;
+      }
+
       const confirmSale = confirm('Activar modo venta? El sistema quedara bloqueado en el catalogo de la empresa hasta ingresar la clave.');
 
       if (!confirmSale) {
@@ -1250,9 +1293,21 @@ import {
       const nombre = document.getElementById('registerNameInput').value.trim();
       const correo = document.getElementById('registerEmailInput').value.trim();
       const contrasena = document.getElementById('registerPasswordInput').value.trim();
+      const confirmarContrasena = document.getElementById('registerPasswordConfirmInput')?.value.trim();
+      const aceptoTerminos = document.getElementById('termsInput')?.checked;
 
-      if (!nombre || !correo || !contrasena) {
-        alert('Debes completar todos los campos.');
+      if (!nombre || !correo || !contrasena || !confirmarContrasena) {
+        alert('Debes completar todos los campos obligatorios.');
+        return;
+      }
+
+      if (contrasena !== confirmarContrasena) {
+        alert('Las contrasenas no coinciden.');
+        return;
+      }
+
+      if (!aceptoTerminos) {
+        alert('Debes aceptar los terminos y condiciones.');
         return;
       }
 
@@ -1260,14 +1315,22 @@ import {
         const credenciales = await createUserWithEmailAndPassword(auth, correo, contrasena);
         const uid = credenciales.user.uid;
 
+        await sendEmailVerification(credenciales.user);
+
         const userData = {
           uid,
           id_usuario: uid,
           nombre,
           correo,
           tipo_cuenta: selectedRole,
+          email_verificado: false,
           creado_en: serverTimestamp()
         };
+
+        if (selectedRole === "usuario") {
+          userData.nombre_usuario = document.getElementById('registerUsernameInput')?.value.trim() || "";
+          userData.ubicacion = document.getElementById('registerUserLocationInput')?.value.trim() || "";
+        }
 
         await setDoc(doc(db, "usuarios", uid), userData);
 
@@ -1279,17 +1342,21 @@ import {
             nombre_empresa: nombre,
             nombre,
             correo,
-            descripcion: "Empresa registrada en Tienda Tech.",
+            descripcion: document.getElementById('registerCompanyDescriptionInput')?.value.trim() || "Empresa registrada en Tienda Tech.",
             logo: nombre.slice(0, 2).toUpperCase(),
-            telefono: "",
-            direccion: "",
+            telefono: document.getElementById('registerCompanyPhoneInput')?.value.trim() || "",
+            direccion: document.getElementById('registerCompanyAddressInput')?.value.trim() || "",
+            categoria_principal: document.getElementById('registerCompanyCategoryInput')?.value.trim() || "",
+            encargado: document.getElementById('registerCompanyManagerInput')?.value.trim() || "",
+            aprobado: false,
+            estado: "pendiente",
             creado_en: serverTimestamp()
           });
         }
 
         await signOut(auth);
 
-        alert('Cuenta creada correctamente. Ahora puedes iniciar sesion.');
+        alert('Cuenta creada correctamente. Te enviamos un correo de verificacion. Verifica tu correo antes de iniciar sesion.');
 
         await loadData();
 
@@ -1318,6 +1385,13 @@ import {
         const credenciales = await signInWithEmailAndPassword(auth, correo, contrasena);
         const uid = credenciales.user.uid;
 
+        if (!credenciales.user.emailVerified) {
+          await sendEmailVerification(credenciales.user);
+          await signOut(auth);
+          alert('Debes verificar tu correo antes de iniciar sesion. Te enviamos nuevamente el correo de verificacion.');
+          return;
+        }
+
         const usuarioRef = doc(db, "usuarios", uid);
         const usuarioSnap = await getDoc(usuarioRef);
 
@@ -1326,6 +1400,10 @@ import {
           alert('La cuenta existe en Firebase Auth, pero no tiene perfil en Firestore.');
           return;
         }
+
+        await updateDoc(usuarioRef, {
+          email_verificado: true
+        });
 
         const usuario = usuarioSnap.data();
 
@@ -1340,7 +1418,8 @@ import {
           id_usuario: uid,
           nombre: usuario.nombre,
           correo: usuario.correo,
-          tipo_cuenta: usuario.tipo_cuenta
+          tipo_cuenta: usuario.tipo_cuenta,
+          email_verificado: true
         };
 
         if (usuario.tipo_cuenta === "empresa") {
@@ -1353,7 +1432,14 @@ import {
               ...account,
               id_empresa: uid,
               nombre_empresa: empresa.nombre_empresa || usuario.nombre,
-              marketId: uid
+              marketId: uid,
+              aprobado: empresa.aprobado === true,
+              estado: empresa.estado || "pendiente",
+              telefono: empresa.telefono || "",
+              direccion: empresa.direccion || "",
+              categoria_principal: empresa.categoria_principal || "",
+              encargado: empresa.encargado || "",
+              descripcion: empresa.descripcion || ""
             };
           } else {
             await signOut(auth);
