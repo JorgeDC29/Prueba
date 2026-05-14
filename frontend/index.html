@@ -18,7 +18,7 @@
       </div>
 
       <h1 id="authTitle" class="login-title">Inicio de sesion</h1>
-      <p id="authText" class="login-text">Entra con tu cuenta para comprar, guardar favoritos o administrar productos como empresa.</p>
+      <p id="authText" class="login-text">Entra con tu cuenta verificada para comprar, guardar favoritos o administrar productos como empresa.</p>
 
       <div class="login-type-box">
         <button class="login-type-button active" type="button" data-role="usuario">Usuario</button>
@@ -41,8 +41,47 @@
 
       <form id="registerForm" class="hidden">
         <div class="form-group">
-          <label class="form-label" for="registerNameInput">Nombre</label>
-          <input id="registerNameInput" class="form-input" type="text" placeholder="Tu nombre o nombre de empresa" required>
+          <label id="registerNameLabel" class="form-label" for="registerNameInput">Nombre completo</label>
+          <input id="registerNameInput" class="form-input" type="text" placeholder="Tu nombre completo" required>
+        </div>
+
+        <div id="userRegisterFields">
+          <div class="form-group">
+            <label class="form-label" for="registerUsernameInput">Nombre de usuario</label>
+            <input id="registerUsernameInput" class="form-input" type="text" placeholder="Ejemplo: jorge_dc">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="registerUserLocationInput">Provincia o zona</label>
+            <input id="registerUserLocationInput" class="form-input" type="text" placeholder="Ejemplo: Herrera, Panama">
+          </div>
+        </div>
+
+        <div id="companyRegisterFields" class="hidden">
+          <div class="form-group">
+            <label class="form-label" for="registerCompanyManagerInput">Nombre del encargado</label>
+            <input id="registerCompanyManagerInput" class="form-input" type="text" placeholder="Persona encargada de la cuenta">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="registerCompanyPhoneInput">Telefono de contacto</label>
+            <input id="registerCompanyPhoneInput" class="form-input" type="text" placeholder="Ejemplo: 6000-0000">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="registerCompanyAddressInput">Direccion o zona</label>
+            <input id="registerCompanyAddressInput" class="form-input" type="text" placeholder="Ejemplo: Chitre, Herrera">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="registerCompanyCategoryInput">Categoria principal</label>
+            <input id="registerCompanyCategoryInput" class="form-input" type="text" placeholder="Ejemplo: Tecnologia, comida, ropa">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="registerCompanyDescriptionInput">Descripcion de la empresa</label>
+            <textarea id="registerCompanyDescriptionInput" class="form-textarea" placeholder="Describe brevemente tu negocio"></textarea>
+          </div>
         </div>
 
         <div class="form-group">
@@ -52,8 +91,18 @@
 
         <div class="form-group">
           <label class="form-label" for="registerPasswordInput">Contrasena</label>
-          <input id="registerPasswordInput" class="form-input" type="password" placeholder="Crea una contrasena" required>
+          <input id="registerPasswordInput" class="form-input" type="password" placeholder="Minimo 6 caracteres" required>
         </div>
+
+        <div class="form-group">
+          <label class="form-label" for="registerPasswordConfirmInput">Confirmar contrasena</label>
+          <input id="registerPasswordConfirmInput" class="form-input" type="password" placeholder="Repite tu contrasena" required>
+        </div>
+
+        <label class="checkbox-line">
+          <input id="termsInput" type="checkbox" required>
+          Acepto los terminos y condiciones de Tienda Tech.
+        </label>
 
         <button id="registerSubmit" class="login-submit" type="submit">Crear cuenta de usuario</button>
       </form>
