@@ -113,6 +113,17 @@ import {
       return currentAccount?.correo && ADMIN_EMAILS.includes(currentAccount.correo.toLowerCase());
     }
 
+    function normalizeUsername(username) {
+      return String(username || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '_');
+    }
+
+    function isEmail(value) {
+      return String(value || '').includes('@');
+    }
+
     function getCategoryIdByName(categoryName) {
       return categoryName || null;
     }
@@ -251,6 +262,7 @@ import {
     const authText = document.getElementById('authText');
     const authHelpText = document.getElementById('authHelpText');
     const toggleAuthButton = document.getElementById('toggleAuthButton');
+    const authTypeBox = document.getElementById('authTypeBox');
     const emailLabel = document.getElementById('emailLabel');
     const registerEmailLabel = document.getElementById('registerEmailLabel');
     const loginSubmit = document.getElementById('loginSubmit');
@@ -278,19 +290,16 @@ import {
         button.classList.toggle('active', button.dataset.role === role);
       });
 
-      if (role === 'usuario') {
-        emailLabel.textContent = 'Correo del usuario';
-        loginSubmit.textContent = 'Entrar como usuario';
+      emailLabel.textContent = 'Correo o nombre de usuario';
+      loginSubmit.textContent = 'Iniciar sesion';
 
+      if (role === 'usuario') {
         if (registerNameLabel) registerNameLabel.textContent = 'Nombre completo';
         if (registerEmailLabel) registerEmailLabel.textContent = 'Correo del usuario';
         if (registerSubmit) registerSubmit.textContent = 'Crear cuenta de usuario';
         if (userRegisterFields) userRegisterFields.classList.remove('hidden');
         if (companyRegisterFields) companyRegisterFields.classList.add('hidden');
       } else {
-        emailLabel.textContent = 'Correo de la empresa';
-        loginSubmit.textContent = 'Entrar como empresa';
-
         if (registerNameLabel) registerNameLabel.textContent = 'Nombre de la empresa';
         if (registerEmailLabel) registerEmailLabel.textContent = 'Correo de la empresa';
         if (registerSubmit) registerSubmit.textContent = 'Crear cuenta de empresa';
@@ -309,11 +318,15 @@ import {
 
       authTitle.textContent = isRegister ? 'Crear cuenta' : 'Inicio de sesion';
       authText.textContent = isRegister
-        ? 'Crea una cuenta como usuario o empresa para empezar a usar Tienda Tech.'
-        : 'Entra con tu cuenta para comprar, guardar favoritos o administrar productos como empresa.';
+        ? 'Elige si crearas una cuenta de usuario o empresa. Luego podras iniciar sesion con tu correo o nombre de usuario.'
+        : 'Entra con tu correo o nombre de usuario. El sistema detectara automaticamente tu tipo de cuenta.';
 
       authHelpText.textContent = isRegister ? 'Ya tienes cuenta?' : 'No tienes cuenta?';
       toggleAuthButton.textContent = isRegister ? 'Iniciar sesion' : 'Crear cuenta';
+
+      if (authTypeBox) {
+        authTypeBox.classList.toggle('hidden', !isRegister);
+      }
 
       selectLoginType(selectedRole);
     }
@@ -1241,7 +1254,7 @@ import {
             <div class="panel">
               <h3>Perfil del usuario</h3>
               <p><strong>Nombre:</strong> ${nombre}</p>
-              <p><strong>Correo:</strong> ${correo}</p>
+              <p><strong>Correo:</strong> ${correo}</p>\n              <p><strong>Usuario:</strong> ${currentAccount?.nombre_usuario || 'No registrado'}</p>\n              <p><strong>Usuario:</strong> ${currentAccount?.nombre_usuario || 'No registrado'}</p>
               <p><strong>Tipo de cuenta:</strong> ${tipo}</p>
 
               <div class="mini-stats">
@@ -1461,13 +1474,20 @@ import {
       event.preventDefault();
 
       const nombre = document.getElementById('registerNameInput').value.trim();
+      const nombreUsuarioOriginal = document.getElementById('registerUsernameInput')?.value.trim() || '';
+      const nombreUsuario = normalizeUsername(nombreUsuarioOriginal);
       const correo = document.getElementById('registerEmailInput').value.trim();
       const contrasena = document.getElementById('registerPasswordInput').value.trim();
       const confirmarContrasena = document.getElementById('registerPasswordConfirmInput')?.value.trim();
       const aceptoTerminos = document.getElementById('termsInput')?.checked;
 
-      if (!nombre || !correo || !contrasena || !confirmarContrasena) {
+      if (!nombre || !nombreUsuario || !correo || !contrasena || !confirmarContrasena) {
         alert('Debes completar todos los campos obligatorios.');
+        return;
+      }
+
+      if (!/^[a-z0-9_]{3,20}$/.test(nombreUsuario)) {
+        alert('El nombre de usuario solo puede tener letras, numeros y guion bajo. Debe tener entre 3 y 20 caracteres.');
         return;
       }
 
@@ -1482,6 +1502,14 @@ import {
       }
 
       try {
+        const usernameRef = doc(db, "usernames", nombreUsuario);
+        const usernameSnap = await getDoc(usernameRef);
+
+        if (usernameSnap.exists()) {
+          alert('Ese nombre de usuario ya esta en uso.');
+          return;
+        }
+
         const credenciales = await createUserWithEmailAndPassword(auth, correo, contrasena);
         const uid = credenciales.user.uid;
 
@@ -1491,6 +1519,7 @@ import {
           uid,
           id_usuario: uid,
           nombre,
+          nombre_usuario: nombreUsuario,
           correo,
           tipo_cuenta: selectedRole,
           email_verificado: false,
@@ -1498,11 +1527,18 @@ import {
         };
 
         if (selectedRole === "usuario") {
-          userData.nombre_usuario = document.getElementById('registerUsernameInput')?.value.trim() || "";
           userData.ubicacion = document.getElementById('registerUserLocationInput')?.value.trim() || "";
         }
 
         await setDoc(doc(db, "usuarios", uid), userData);
+
+        await setDoc(usernameRef, {
+          uid,
+          correo,
+          nombre_usuario: nombreUsuario,
+          tipo_cuenta: selectedRole,
+          creado_en: serverTimestamp()
+        });
 
         if (selectedRole === "empresa") {
           await setDoc(doc(db, "empresas", uid), {
@@ -1511,6 +1547,7 @@ import {
             id_empresa: uid,
             nombre_empresa: nombre,
             nombre,
+            nombre_usuario: nombreUsuario,
             correo,
             descripcion: document.getElementById('registerCompanyDescriptionInput')?.value.trim() || "Empresa registrada en Tienda Tech.",
             logo: nombre.slice(0, 2).toUpperCase(),
@@ -1531,7 +1568,7 @@ import {
         await loadData();
 
         registerForm.reset();
-        document.getElementById('emailInput').value = correo;
+        document.getElementById('emailInput').value = nombreUsuario;
         document.getElementById('passwordInput').value = '';
 
         setAuthMode('login');
@@ -1543,16 +1580,30 @@ import {
     loginForm.addEventListener('submit', async (event) => {
       event.preventDefault();
 
-      const correo = document.getElementById('emailInput').value.trim();
+      const identificador = document.getElementById('emailInput').value.trim();
       const contrasena = document.getElementById('passwordInput').value.trim();
 
-      if (!correo || !contrasena) {
-        alert('Debes escribir correo y contrasena.');
+      if (!identificador || !contrasena) {
+        alert('Debes escribir correo o nombre de usuario y contrasena.');
         return;
       }
 
       try {
-        const credenciales = await signInWithEmailAndPassword(auth, correo, contrasena);
+        let correoLogin = identificador;
+
+        if (!isEmail(identificador)) {
+          const username = normalizeUsername(identificador);
+          const usernameSnap = await getDoc(doc(db, "usernames", username));
+
+          if (!usernameSnap.exists()) {
+            alert('No existe una cuenta con ese nombre de usuario.');
+            return;
+          }
+
+          correoLogin = usernameSnap.data().correo;
+        }
+
+        const credenciales = await signInWithEmailAndPassword(auth, correoLogin, contrasena);
         const uid = credenciales.user.uid;
 
         if (!credenciales.user.emailVerified) {
@@ -1577,16 +1628,11 @@ import {
 
         const usuario = usuarioSnap.data();
 
-        if (usuario.tipo_cuenta !== selectedRole) {
-          await signOut(auth);
-          alert('El tipo de cuenta seleccionado no coincide con esta cuenta.');
-          return;
-        }
-
         let account = {
           uid,
           id_usuario: uid,
           nombre: usuario.nombre,
+          nombre_usuario: usuario.nombre_usuario || '',
           correo: usuario.correo,
           tipo_cuenta: usuario.tipo_cuenta,
           email_verificado: true
@@ -1618,6 +1664,7 @@ import {
           }
         }
 
+        selectedRole = account.tipo_cuenta;
         authToken = uid;
         currentAccount = account;
 
@@ -1626,7 +1673,7 @@ import {
 
         await startSession(account.tipo_cuenta, account);
       } catch (error) {
-        alert('No se pudo iniciar sesion. Revisa correo, contrasena y tipo de cuenta.');
+        alert('No se pudo iniciar sesion. Revisa correo/nombre de usuario y contrasena.');
       }
     });
 
