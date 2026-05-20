@@ -2364,3 +2364,28 @@
   color: #92400e;
   border-color: rgba(245, 158, 11, 0.35);
 }
+
+.offer-control span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.offer-control strong {
+  color: var(--azul-oscuro);
+  font-size: 0.88rem;
+}
+
+.offer-control small {
+  color: var(--gris);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.compact-note {
+  padding: 16px;
+}
+
+.compact-note h3 {
+  margin-bottom: 6px;
+}

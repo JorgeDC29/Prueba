@@ -91,6 +91,22 @@ import {
       'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80'
     ];
 
+    const PRODUCT_CATEGORIES = [
+      'Tecnologia',
+      'Computadoras',
+      'Celulares',
+      'Accesorios',
+      'Gaming',
+      'Audio',
+      'Monitores',
+      'Almacenamiento',
+      'Oficina',
+      'Hogar',
+      'Comida',
+      'Ropa',
+      'Otros'
+    ];
+
     function getDefaultRating(productId) {
       const ratings = {
         1: 4, 2: 5, 3: 3, 4: 4, 5: 5,
@@ -945,7 +961,7 @@ import {
     }
 
     function isOfferProduct(product) {
-      return product.en_oferta === true || product.oferta === true || product.promocion === true || Number(product.descuento || 0) > 0 || Number(product.precio_anterior || 0) > getProductPrice(product);
+      return product.en_oferta === true || product.destacado_venta === true || product.oferta === true || product.promocion === true || Number(product.descuento || 0) > 0 || Number(product.precio_anterior || 0) > getProductPrice(product);
     }
 
     function createInsightCard(icon, label, value, helper) {
@@ -1362,7 +1378,7 @@ import {
     }
 
     function getCategories() {
-      return [...new Set(products.map((product) => (product.category || product.nombre_categoria || 'Sin categoria')))].sort();
+      return PRODUCT_CATEGORIES;
     }
 
     async function toggleFavorite(productId) {
@@ -1777,7 +1793,7 @@ import {
       dynamicContent.innerHTML = `
         <div class="panel">
           <h3>${editing ? 'Editar producto' : 'Nuevo producto'}</h3>
-          <p>Completa los datos principales para que el producto aparezca correctamente en el catalogo.</p>
+          <p>Agrega la informacion del producto. Los productos activos aparecen automaticamente; si lo inhabilitas, se ocultan del catalogo.</p>
 
           <form id="productForm" class="form-grid">
             <div class="form-group">
@@ -1788,10 +1804,11 @@ import {
             <div class="form-group">
               <label class="form-label">Categoria</label>
               <select id="productCategory" class="form-select" required>
-                ${['Tecnologia', 'Gaming', 'Audio', 'Oficina', 'Hogar', 'Comida', 'Ropa', 'Otros'].map((category) => `
+                ${PRODUCT_CATEGORIES.map((category) => `
                   <option value="${category}" ${product && (product.category || product.nombre_categoria) === category ? 'selected' : ''}>${category}</option>
                 `).join('')}
               </select>
+              <small class="field-hint">Las categorias estan fijas para mantener los filtros ordenados.</small>
             </div>
 
             <div class="form-group">
@@ -1853,14 +1870,17 @@ import {
               <textarea id="productFullDescription" class="form-textarea" placeholder="Detalles completos del producto">${product ? (product.descripcion_completa || product.description || product.descripcion || '') : ''}</textarea>
             </div>
 
-            <label class="checkbox-line form-group full">
+            <label class="checkbox-line form-group full offer-control">
               <input id="productOffer" type="checkbox" ${product && isOfferProduct(product) ? 'checked' : ''}>
-              <span>Mostrar este producto como oferta en modo venta</span>
+              <span>
+                <strong>Marcar como oferta destacada</strong>
+                <small>Se mostrara en la seccion de ofertas del modo venta. Si no lo marcas, quedara en productos generales.</small>
+              </span>
             </label>
 
-            <div class="panel">
-              <h3>Valoracion y precio</h3>
-              <p>Las calificaciones las hacen los usuarios. La empresa solo administra los datos del producto.</p>
+            <div class="panel compact-note">
+              <h3>Visibilidad</h3>
+              <p>No hay que marcar si aparece en catalogo: todo producto activo aparece automaticamente. Para ocultarlo, usa Inhabilitar desde Mis productos.</p>
             </div>
 
             <button class="primary-button" type="submit">${editing ? 'Guardar cambios' : 'Crear producto'}</button>
@@ -1893,6 +1913,7 @@ import {
           condicion: document.getElementById('productCondition').value,
           garantia: document.getElementById('productWarranty').value.trim(),
           en_oferta: document.getElementById('productOffer').checked,
+          destacado_venta: document.getElementById('productOffer').checked,
           estado: editing ? (product.estado || "activo") : "activo",
           nombre_empresa: companyName,
           fecha_publicacion: document.getElementById('productDate').value || new Date().toISOString().slice(0, 10)
@@ -2147,8 +2168,8 @@ import {
             <section class="sale-product-section">
               <div class="sale-section-heading">
                 <div>
-                  <span class="section-kicker">Promociones</span>
-                  <h3>Ofertas destacadas</h3>
+                  <span class="section-kicker">Ofertas</span>
+                  <h3>Productos en oferta</h3>
                 </div>
                 <small>${offerProducts.length} producto${offerProducts.length === 1 ? '' : 's'}</small>
               </div>
@@ -2167,7 +2188,7 @@ import {
             ${generalProducts.length === 0 ? `
               <div class="empty-state compact-empty">
                 <h3>Sin productos generales</h3>
-                <p>Los productos disponibles estan marcados como oferta.</p>
+                <p>Todos los productos activos estan en la seccion de ofertas.</p>
               </div>
             ` : `<div class="product-grid">${generalProducts.map(createSaleProductCard).join('')}</div>`}
           </section>
