@@ -944,6 +944,10 @@ import {
       return notes;
     }
 
+    function isOfferProduct(product) {
+      return product.en_oferta === true || product.oferta === true || product.promocion === true || Number(product.descuento || 0) > 0 || Number(product.precio_anterior || 0) > getProductPrice(product);
+    }
+
     function createInsightCard(icon, label, value, helper) {
       return `
         <article class="insight-card">
@@ -1849,6 +1853,11 @@ import {
               <textarea id="productFullDescription" class="form-textarea" placeholder="Detalles completos del producto">${product ? (product.descripcion_completa || product.description || product.descripcion || '') : ''}</textarea>
             </div>
 
+            <label class="checkbox-line form-group full">
+              <input id="productOffer" type="checkbox" ${product && isOfferProduct(product) ? 'checked' : ''}>
+              <span>Mostrar este producto como oferta en modo venta</span>
+            </label>
+
             <div class="panel">
               <h3>Valoracion y precio</h3>
               <p>Las calificaciones las hacen los usuarios. La empresa solo administra los datos del producto.</p>
@@ -1883,6 +1892,7 @@ import {
           modelo: document.getElementById('productModel').value.trim(),
           condicion: document.getElementById('productCondition').value,
           garantia: document.getElementById('productWarranty').value.trim(),
+          en_oferta: document.getElementById('productOffer').checked,
           estado: editing ? (product.estado || "activo") : "activo",
           nombre_empresa: companyName,
           fecha_publicacion: document.getElementById('productDate').value || new Date().toISOString().slice(0, 10)
@@ -2100,6 +2110,8 @@ import {
       const marketProducts = getFilteredProducts().filter((product) => {
         return getProductCompanyId(product) === market.id && product.estado !== "inhabilitado";
       });
+      const offerProducts = marketProducts.filter(isOfferProduct);
+      const generalProducts = marketProducts.filter((product) => !isOfferProduct(product));
 
       sectionTitle.textContent = 'Modo venta';
       sectionActions.innerHTML = `
@@ -2131,7 +2143,34 @@ import {
             <p>No hay productos que coincidan con la busqueda o los filtros seleccionados.</p>
           </div>
         ` : `
-          <div class="product-grid">${marketProducts.map(createSaleProductCard).join('')}</div>
+          ${offerProducts.length > 0 ? `
+            <section class="sale-product-section">
+              <div class="sale-section-heading">
+                <div>
+                  <span class="section-kicker">Promociones</span>
+                  <h3>Ofertas destacadas</h3>
+                </div>
+                <small>${offerProducts.length} producto${offerProducts.length === 1 ? '' : 's'}</small>
+              </div>
+              <div class="product-grid">${offerProducts.map(createSaleProductCard).join('')}</div>
+            </section>
+          ` : ''}
+
+          <section class="sale-product-section">
+            <div class="sale-section-heading">
+              <div>
+                <span class="section-kicker">Catalogo</span>
+                <h3>Productos generales</h3>
+              </div>
+              <small>${generalProducts.length} producto${generalProducts.length === 1 ? '' : 's'}</small>
+            </div>
+            ${generalProducts.length === 0 ? `
+              <div class="empty-state compact-empty">
+                <h3>Sin productos generales</h3>
+                <p>Los productos disponibles estan marcados como oferta.</p>
+              </div>
+            ` : `<div class="product-grid">${generalProducts.map(createSaleProductCard).join('')}</div>`}
+          </section>
         `}
       `;
 
@@ -2163,6 +2202,7 @@ import {
               </div>
 
               <div class="tag-row">
+                ${isOfferProduct(product) ? '<span class="tag offer-tag">Oferta</span>' : ''}
                 ${product.economical ? '<span class="tag">Buen precio</span>' : ''}
                 ${product.recommended ? '<span class="tag">Bien valorado</span>' : ''}
               </div>
@@ -2640,7 +2680,7 @@ import {
       if (!('serviceWorker' in navigator)) return;
 
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => {});
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
       });
     }
 

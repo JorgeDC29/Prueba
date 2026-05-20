@@ -2,13 +2,10 @@
   "buildCommand": null,
   "outputDirectory": "frontend",
   "framework": null,
+  "cleanUrls": true,
   "rewrites": [
     {
       "source": "/",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/:path*",
       "destination": "/index.html"
     }
   ],
@@ -31,7 +28,7 @@
       ]
     },
     {
-      "source": "/js/app.js",
+      "source": "/js/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -40,7 +37,7 @@
       ]
     },
     {
-      "source": "/js/firebase.js",
+      "source": "/css/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -49,7 +46,16 @@
       ]
     },
     {
-      "source": "/css/:path*",
+      "source": "/manifest.webmanifest",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/sw.js",
       "headers": [
         {
           "key": "Cache-Control",

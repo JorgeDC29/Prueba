@@ -1772,8 +1772,7 @@
 .market-card,
 .overview-card,
 .profile-card {
-  content-visibility: auto;
-  contain-intrinsic-size: 260px;
+  content-visibility: visible;
 }
 
 @media (max-width: 1180px) {
@@ -2295,4 +2294,73 @@
   .detail-product-image {
     min-height: 280px;
   }
+}
+
+/* AJUSTE DE FLUIDEZ EN SCROLL */
+.content-scroll {
+  scroll-behavior: auto;
+  overflow-anchor: none;
+  scrollbar-gutter: stable;
+}
+
+.product-card,
+.market-card,
+.overview-card,
+.profile-card,
+.insight-card,
+.panel {
+  contain: layout paint;
+  backface-visibility: hidden;
+}
+
+@media (hover: none) {
+  .product-card:hover,
+  .market-card:hover,
+  .overview-card:hover,
+  .upgraded-card:hover,
+  .upgraded-market-card:hover,
+  .mini-market-card:hover,
+  .product-card:hover .product-image {
+    transform: none;
+  }
+}
+
+.sale-product-section {
+  margin-top: 18px;
+}
+
+.sale-product-section + .sale-product-section {
+  margin-top: 26px;
+}
+
+.sale-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 0 2px;
+}
+
+.sale-section-heading h3 {
+  margin-top: 6px;
+  color: #0f172a;
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.sale-section-heading small {
+  color: #64748b;
+  font-weight: 800;
+}
+
+.compact-empty {
+  padding: 18px;
+  min-height: auto;
+}
+
+.offer-tag {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: rgba(245, 158, 11, 0.35);
 }
