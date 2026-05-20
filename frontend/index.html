@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tienda Tech | Portal de ofertas y mercados</title>
+  <meta name="description" content="Portal para explorar productos, mercados, favoritos y modo venta para empresas.">
+  <meta name="theme-color" content="#0ea5e9">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/css/estilos.css">
+</head>
+
+<body>
+  <section id="loginPage" class="login-page">
+    <div class="login-brand-panel">
+      <div class="brand-pill">Portal de ofertas</div>
+      <h1>Compra, compara y administra productos desde un solo lugar.</h1>
+      <p>Una experiencia pensada para usuarios, empresas y modo venta en tienda fisica.</p>
+      <div class="login-feature-grid">
+        <div><span class="material-symbols-outlined">verified</span><strong>Empresas verificadas</strong><p>Las empresas pueden ser aprobadas antes de publicar.</p></div>
+        <div><span class="material-symbols-outlined">tune</span><strong>Filtros inteligentes</strong><p>Precio, categoria, calificacion, estado y busqueda rapida.</p></div>
+        <div><span class="material-symbols-outlined">point_of_sale</span><strong>Modo venta</strong><p>Catalogo bloqueado para kioscos o mostradores.</p></div>
+      </div>
+    </div>
+
+    <div class="login-card">
+      <div class="auth-topbar">
+        <button id="registerBackButton" class="auth-home-button hidden" type="button" aria-label="Volver al inicio de sesion">
+          <span class="material-symbols-outlined">home</span>
+        </button>
+        <div class="login-logo">
+          <span class="material-symbols-outlined">dataset</span>
+          <span>Tienda Tech</span>
+        </div>
+        <span class="auth-topbar-spacer"></span>
+      </div>
+
+      <h1 id="authTitle" class="login-title">Inicio de sesion</h1>
+      <p id="authText" class="login-text">Entra con tu correo o nombre de usuario.</p>
+
+      <div id="authTypeBox" class="login-type-box">
+        <button class="login-type-button active" type="button" data-role="usuario">Usuario</button>
+        <button class="login-type-button" type="button" data-role="empresa">Empresa</button>
+      </div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label id="emailLabel" class="form-label" for="emailInput">Correo o nombre de usuario</label>
+          <input id="emailInput" class="form-input" type="text" placeholder="correo@ejemplo.com o usuario" autocomplete="username" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="passwordInput">Contrasena</label>
+          <input id="passwordInput" class="form-input" type="password" placeholder="Ingresa tu contrasena" autocomplete="current-password" required>
+        </div>
+
+        <button id="loginSubmit" class="login-submit" type="submit">Entrar como usuario</button>
+      </form>
+
+      <form id="registerForm" class="hidden register-grid" novalidate>
+        <div class="form-group">
+          <label id="registerNameLabel" class="form-label" for="registerNameInput">Nombre completo</label>
+          <input id="registerNameInput" class="form-input" type="text" placeholder="Tu nombre completo" autocomplete="name" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="registerUsernameInput">Nombre de usuario</label>
+          <input id="registerUsernameInput" class="form-input" type="text" placeholder="Ejemplo: jorge_dc o tech_store" autocomplete="username" required>
+          <small class="field-hint">Letras, numeros, punto o guion bajo. Sin espacios.</small>
+        </div>
+
+        <div id="userRegisterFields" class="register-subgrid">
+          <div class="form-group">
+            <label class="form-label" for="registerUserLocationInput">Provincia o zona</label>
+            <input id="registerUserLocationInput" class="form-input" type="text" placeholder="Ejemplo: Herrera, Panama">
+          </div>
+        </div>
+
+        <div id="companyRegisterFields" class="hidden register-subgrid company-register-grid">
+          <div class="form-group">
+            <label class="form-label" for="registerCompanyManagerInput">Nombre del encargado</label>
+            <input id="registerCompanyManagerInput" class="form-input" type="text" placeholder="Persona encargada de la cuenta">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="registerCompanyPhoneInput">Telefono de contacto</label>
+            <input id="registerCompanyPhoneInput" class="form-input" type="text" placeholder="Ejemplo: 6000-0000">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="registerCompanyAddressInput">Direccion o zona</label>
+            <input id="registerCompanyAddressInput" class="form-input" type="text" placeholder="Ejemplo: Chitre, Herrera">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="registerCompanyCategoryInput">Categoria principal</label>
+            <input id="registerCompanyCategoryInput" class="form-input" type="text" placeholder="Ejemplo: Tecnologia, comida, ropa">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="registerCompanyDescriptionInput">Descripcion de la empresa</label>
+            <textarea id="registerCompanyDescriptionInput" class="form-textarea" placeholder="Que vendes y donde atiendes"></textarea>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label id="registerEmailLabel" class="form-label" for="registerEmailInput">Correo del usuario</label>
+          <input id="registerEmailInput" class="form-input" type="email" placeholder="ejemplo@correo.com" autocomplete="email" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="registerPasswordInput">Contrasena</label>
+          <input id="registerPasswordInput" class="form-input" type="password" placeholder="Minimo 6 caracteres" autocomplete="new-password" required>
+          <small class="field-hint">Minimo 6 caracteres. Mejor si combinas letras y numeros.</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="registerPasswordConfirmInput">Confirmar contrasena</label>
+          <input id="registerPasswordConfirmInput" class="form-input" type="password" placeholder="Repite tu contrasena" autocomplete="new-password" required>
+        </div>
+
+        <label class="checkbox-line register-full">
+          <input id="termsInput" type="checkbox" required>
+          Acepto los terminos y condiciones de Tienda Tech.
+        </label>
+
+        <button id="registerSubmit" class="login-submit register-full" type="submit">Crear cuenta de usuario</button>
+      </form>
+
+      <p class="login-help">
+        <span id="authHelpText">No tienes cuenta?</span>
+        <button id="toggleAuthButton" class="auth-link-button" type="button">Crear cuenta</button>
+      </p>
+    </div>
+  </section>
+
+  <main id="appPage" class="app-shell hidden">
+    <header class="main-header">
+      <div class="logo-box">
+        <span class="material-symbols-outlined">dataset</span>
+        <span>Tienda Tech</span>
+      </div>
+
+      <div class="session-info">
+        <span id="sessionTypeText">Sesion: Usuario</span>
+        <button id="logoutButton" class="logout-button" type="button">Salir</button>
+      </div>
+    </header>
+
+    <div class="layout-body">
+      <aside id="dashboard" class="dashboard"></aside>
+
+      <section class="content-area">
+        <div class="section-header">
+          <h2 id="sectionTitle" class="section-title">Inicio</h2>
+          <div id="sectionActions" class="section-actions"></div>
+        </div>
+
+        <div id="contentScroll" class="content-scroll">
+          <div id="dynamicContent"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <noscript>Necesitas activar JavaScript para usar Tienda Tech.</noscript>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
