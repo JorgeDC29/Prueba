@@ -449,7 +449,13 @@ import {
             date: formatFirebaseDate(product.fecha_publicacion || product.date),
             economical: precio < 30,
             recommended: promedio > 3,
-            nombre_empresa: product.nombre_empresa || "Sin empresa"
+            nombre_empresa: product.nombre_empresa || "Sin empresa",
+            en_oferta: product.en_oferta === true,
+            destacado_venta: product.destacado_venta === true,
+            oferta: product.oferta === true,
+            promocion: product.promocion === true,
+            descuento: Number(product.descuento || 0),
+            precio_anterior: Number(product.precio_anterior || 0)
           };
         });
 
@@ -1808,6 +1814,7 @@ import {
                   <option value="${category}" ${product && (product.category || product.nombre_categoria) === category ? 'selected' : ''}>${category}</option>
                 `).join('')}
               </select>
+              <small class="field-hint">Las categorias estan fijas para mantener los filtros ordenados.</small>
             </div>
 
             <div class="form-group">
@@ -2172,7 +2179,7 @@ import {
                 </div>
                 <small>${offerProducts.length} producto${offerProducts.length === 1 ? '' : 's'}</small>
               </div>
-              <div class="product-grid">${offerProducts.map(createSaleProductCard).join('')}</div>
+              <div class="product-grid sale-offer-grid">${offerProducts.map((product) => createSaleProductCard(product, true)).join('')}</div>
             </section>
           ` : ''}
 
@@ -2189,7 +2196,7 @@ import {
                 <h3>Sin productos generales</h3>
                 <p>Todos los productos activos estan en la seccion de ofertas.</p>
               </div>
-            ` : `<div class="product-grid">${generalProducts.map(createSaleProductCard).join('')}</div>`}
+            ` : `<div class="product-grid">${generalProducts.map((product) => createSaleProductCard(product, false)).join('')}</div>`}
           </section>
         `}
       `;
@@ -2197,11 +2204,13 @@ import {
       activateProductToolbar(renderSaleModeCatalog);
     }
 
-    function createSaleProductCard(product) {
+    function createSaleProductCard(product, highlightedOffer = false) {
       const productId = product.id || product.id_producto;
+      const offerClass = highlightedOffer ? ' sale-offer-card' : '';
 
       return `
-        <article class="product-card" onclick='showProductDetail(${jsString(productId)})'>
+        <article class="product-card sale-product-card${offerClass}" onclick='showProductDetail(${jsString(productId)})'>
+          ${highlightedOffer ? '<div class="sale-offer-ribbon"><span class="material-symbols-outlined">local_offer</span> Oferta destacada</div>' : ''}
           <div class="product-image-box">
             <img class="product-image" src="${product.image || product.imagen || baseImages[0]}" alt="${product.name || product.nombre}" loading="lazy" decoding="async">
           </div>

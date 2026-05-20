@@ -2365,6 +2365,58 @@
   border-color: rgba(245, 158, 11, 0.35);
 }
 
+
+.sale-offer-grid {
+  gap: 18px;
+}
+
+.sale-product-card {
+  position: relative;
+}
+
+.sale-offer-card {
+  border: 2px solid rgba(245, 158, 11, 0.72);
+  background: linear-gradient(180deg, #fff7ed 0%, #ffffff 38%, #ffffff 100%);
+  box-shadow: 0 22px 55px rgba(245, 158, 11, 0.20), var(--sombra);
+}
+
+.sale-offer-card .product-image-box {
+  background: linear-gradient(135deg, #fbbf24, #fb923c);
+}
+
+.sale-offer-card .product-title {
+  color: #7c2d12;
+}
+
+.sale-offer-ribbon {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: #f97316;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+  box-shadow: 0 10px 22px rgba(249, 115, 22, 0.32);
+}
+
+.sale-offer-ribbon .material-symbols-outlined {
+  font-size: 1rem;
+}
+
+.sale-offer-card .offer-tag {
+  background: #ffedd5;
+  color: #9a3412;
+  border-color: rgba(249, 115, 22, 0.42);
+}
+
 .offer-control span {
   display: flex;
   flex-direction: column;
