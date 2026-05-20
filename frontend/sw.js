@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tienda-tech-cache-v6';
+const CACHE_NAME = 'tienda-tech-cache-v7';
 const APP_SHELL = [
   '/',
   '/index.html',

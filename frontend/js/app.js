@@ -828,7 +828,7 @@ import {
                 <span class="material-symbols-outlined">search</span>
                 <input id="homeSearchInput" type="text" placeholder="Laptop, teclado, audifonos, mercado...">
               </div>
-              <p>Busca rapido y abre el catalogo con ese resultado.</p>
+              <p>Busca productos, marcas o modelos rapidamente.</p>
             </div>
           </section>
 
@@ -844,7 +844,7 @@ import {
               <div class="home-product-header">
                 <div>
                   <h3>Mercados destacados</h3>
-                  <p>Empresas con catalogo activo dentro del portal.</p>
+                  <p>Empresas disponibles en el portal.</p>
                 </div>
                 <button class="small-button" type="button" onclick="changeSection('mercados')">Ver todos</button>
               </div>
@@ -1799,7 +1799,7 @@ import {
       dynamicContent.innerHTML = `
         <div class="panel">
           <h3>${editing ? 'Editar producto' : 'Nuevo producto'}</h3>
-          <p>Agrega la informacion del producto. Los productos activos aparecen automaticamente; si lo inhabilitas, se ocultan del catalogo.</p>
+          <p>Agrega los datos principales del producto. Los productos activos aparecen automaticamente en el catalogo.</p>
 
           <form id="productForm" class="form-grid">
             <div class="form-group">
@@ -1886,7 +1886,7 @@ import {
 
             <div class="panel compact-note">
               <h3>Visibilidad</h3>
-              <p>No hay que marcar si aparece en catalogo: todo producto activo aparece automaticamente. Para ocultarlo, usa Inhabilitar desde Mis productos.</p>
+              <p>Todo producto activo aparece en el catalogo. Para ocultarlo, cambialo a inhabilitado desde Mis productos.</p>
             </div>
 
             <button class="primary-button" type="submit">${editing ? 'Guardar cambios' : 'Crear producto'}</button>
@@ -2040,7 +2040,7 @@ import {
     function renderMarkets() {
       sectionTitle.textContent = 'Mercados';
       sectionActions.innerHTML = '';
-      const intro = createSectionIntro('Empresas', 'Elige el mercado antes de elegir el producto.', 'Revisa el catalogo, la categoria y los datos principales de cada empresa.');
+      const intro = createSectionIntro('Empresas', 'Explora las empresas disponibles.', 'Entra a un mercado para ver sus productos activos y datos principales.');
       dynamicContent.innerHTML = `
         ${intro}
         ${markets.length === 0 ? createEmptyState('Sin mercados', 'Todavia no hay empresas aprobadas o visibles en la plataforma.') : `<div class="market-grid upgraded-market-grid">${markets.map(createMarketCard).join('')}</div>`}
@@ -2151,23 +2151,21 @@ import {
             <div class="market-logo">${market.logo || 'TT'}</div>
             <div>
               <h3 class="sale-title">${market.name || market.nombre_empresa}</h3>
-              <p class="sale-description">${market.description || market.descripcion || 'Empresa registrada en Tienda Tech.'}</p>
+              <p class="sale-description">${market.description || market.descripcion || 'Catalogo listo para atender clientes en tienda.'}</p>
             </div>
           </div>
-
-          <button class="danger-button" type="button" onclick="requestExitSaleMode()">Desbloquear</button>
         </div>
 
         <div class="sale-note">
-          Catalogo de venta activo. Usa la clave de la empresa para salir.
+          Vista de venta activa. Para salir, usa el boton superior e ingresa la clave de la empresa.
         </div>
 
         ${createProductToolbar()}
 
         ${marketProducts.length === 0 ? `
           <div class="empty-state">
-            <h3>Sin productos</h3>
-            <p>No hay productos que coincidan con la busqueda o los filtros seleccionados.</p>
+            <h3>Sin resultados</h3>
+            <p>No encontramos productos con la busqueda o los filtros actuales.</p>
           </div>
         ` : `
           ${offerProducts.length > 0 ? `
@@ -2175,7 +2173,7 @@ import {
               <div class="sale-section-heading">
                 <div>
                   <span class="section-kicker">Ofertas</span>
-                  <h3>Productos en oferta</h3>
+                  <h3>Ofertas destacadas</h3>
                 </div>
                 <small>${offerProducts.length} producto${offerProducts.length === 1 ? '' : 's'}</small>
               </div>
@@ -2187,14 +2185,14 @@ import {
             <div class="sale-section-heading">
               <div>
                 <span class="section-kicker">Catalogo</span>
-                <h3>Productos generales</h3>
+                <h3>Catalogo general</h3>
               </div>
               <small>${generalProducts.length} producto${generalProducts.length === 1 ? '' : 's'}</small>
             </div>
             ${generalProducts.length === 0 ? `
               <div class="empty-state compact-empty">
-                <h3>Sin productos generales</h3>
-                <p>Todos los productos activos estan en la seccion de ofertas.</p>
+                <h3>Sin productos en catalogo general</h3>
+                <p>Por ahora todos los productos activos estan marcados como oferta.</p>
               </div>
             ` : `<div class="product-grid">${generalProducts.map((product) => createSaleProductCard(product, false)).join('')}</div>`}
           </section>
@@ -2386,7 +2384,7 @@ import {
 
           <div class="panel">
             <h3>Accesos utiles</h3>
-            <p>Administra tu catalogo desde <strong>Mis productos</strong>. Los clientes solo veran productos activos.</p><p>Activa <strong>Modo venta</strong> cuando quieras mostrar tu catalogo en una pantalla de tienda.</p>
+            <p>Administra tu catalogo desde <strong>Mis productos</strong>. Los clientes solo veran productos activos.</p><p>Activa <strong>Modo venta</strong> para mostrar tus productos en una pantalla de tienda.</p>
           </div>
         `;
       }
