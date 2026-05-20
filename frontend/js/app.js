@@ -1808,7 +1808,6 @@ import {
                   <option value="${category}" ${product && (product.category || product.nombre_categoria) === category ? 'selected' : ''}>${category}</option>
                 `).join('')}
               </select>
-              <small class="field-hint">Las categorias estan fijas para mantener los filtros ordenados.</small>
             </div>
 
             <div class="form-group">
